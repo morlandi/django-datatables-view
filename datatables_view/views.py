@@ -12,6 +12,9 @@ from django.db.models import Q
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.template.loader import render_to_string
+from django.http import JsonResponse
+from django.utils.safestring import mark_safe
 
 
 from .columns import Column
@@ -81,19 +84,40 @@ class DatatablesView(View):
         for column_def in column_defs:
             name = column_def['name']
             self.columns.append(name)
-            if column_def.get('searchable', True):
+            if column_def.get('searchable', True if name else False):
                 self.searchable_columns.append(name)
             if column_def.get('foreign_field', None):
                 self.foreign_fields[name] = column_def['foreign_field']
 
     def list_columns(self):
-        columns = [{
-            'name': c['name'],
-            'title': c.get('title', '') if 'title' in c else self.model._meta.get_field(c['name']).verbose_name.title(),
-            'searchable': c.get('searchable', True),
-            'orderable': c.get('orderable', True),
-            'visible': c.get('visible', True),
-        } for c in self.column_defs]
+        columns = []
+        for c in self.column_defs:
+
+            # name = c.get('name', '')
+            # import ipdb; ipdb.set_trace()
+
+            column = {
+                #'name': '',
+                'data': None,
+                'title': '',
+                'searchable': False,
+                'orderable': False,
+                'visible': True,
+            }
+
+            column.update(c)
+
+            if c['name']:
+                column['name'] = c['name']
+                column['data'] = c['name']
+                column['title'] = c.get('title') if 'title' in c else self.model._meta.get_field(c['name']).verbose_name.title()
+                column['searchable'] = c.get('searchable', True)
+                column['orderable'] = c.get('orderable', True)
+
+            columns.append(column)
+
+        trace(columns, prompt='list_columns()')
+
         return columns
 
     @method_decorator(csrf_exempt)
@@ -103,19 +127,45 @@ class DatatablesView(View):
             # #     trace(str(self.request.GET))
             # if 'export' in request.GET:
             #     return self.export_data(request)
+            action = request.GET.get('action', '')
+
+            if action == 'render':
+                return JsonResponse({
+                    'html': self.render_table(request),
+                    'columns': self.list_columns()
+                })
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
         else:
-            response = render(
-                request,
-                self.template_name, {
-
-                    'columns': self.list_columns(),
-                    'initial_order_column_index': self.initial_order_column_index,
-                    'initial_order_column_direction': self.initial_order_column_direction,
-                    'view': self,
-                    'show_date_filter': self.model._meta.get_latest_by is not None,
-                })
+            response = HttpResponse(self.render_table(request))
         return response
+
+    def render_table(self, request):
+
+        template_name = self.template_name
+
+        # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
+        if request.is_ajax():
+            template_name = getattr(self, 'ajax_template_name', '')
+            if not template_name:
+                split = self.template_name.split('.html')
+                split[-1] = '_inner'
+                split.append('.html')
+                template_name = ''.join(split)
+
+        html = render_to_string(
+            template_name, {
+                'title': self.title,
+                'columns': self.list_columns(),
+                'column_details': mark_safe(json.dumps(self.list_columns())),
+                'initial_order_column_index': self.initial_order_column_index,
+                'initial_order_column_direction': self.initial_order_column_direction,
+                'view': self,
+                'show_date_filter': self.model._meta.get_latest_by is not None,
+            },
+            request=request
+        )
+
+        return html
 
     def get(self, request, *args, **kwargs):
 
@@ -224,6 +274,7 @@ class DatatablesView(View):
             retdict = {
                 fieldname: self.render_column(cur_object, fieldname)
                 for fieldname in self.columns
+                if fieldname
             }
             self.customize_row(retdict, cur_object)
             json_data.append(retdict)
