@@ -36,8 +36,7 @@ class DatatablesView(View):
     foreign_fields = {}
     model = None
     template_name = 'datatables_view.html'
-    initial_order_column_index = 0
-    initial_order_column_direction = 'asc'
+    initial_order = [[1, "asc"]]
     column_defs = None
 
     def __init__(self, *args, **kwargs):
@@ -69,7 +68,7 @@ class DatatablesView(View):
                 'searchable': True,
                 'orderable': True,
                 'visible': True,
-                'foreign_field': None,  # example: 'manager_name'
+                'foreign_field': None,  # example: 'manager__name'
                 'placeholder': False
             }, {
                 'name': 'active',
@@ -132,7 +131,8 @@ class DatatablesView(View):
             if action == 'render':
                 return JsonResponse({
                     'html': self.render_table(request),
-                    'columns': self.list_columns()
+                    'columns': self.list_columns(),
+                    'order': self.initial_order,
                 })
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
         else:
@@ -157,8 +157,7 @@ class DatatablesView(View):
                 'title': self.title,
                 'columns': self.list_columns(),
                 'column_details': mark_safe(json.dumps(self.list_columns())),
-                'initial_order_column_index': self.initial_order_column_index,
-                'initial_order_column_direction': self.initial_order_column_direction,
+                'initial_order': mark_safe(json.dumps(self.initial_order)),
                 'view': self,
                 'show_date_filter': self.model._meta.get_latest_by is not None,
             },
@@ -342,7 +341,8 @@ class DatatablesView(View):
                 query_param_name = model_column.get_field_search_path()
 
                 search_filters |=\
-                    Q(**{query_param_name+'__istartswith': search_value})
+                    Q(**{query_param_name+'__icontains': search_value})
+                    #Q(**{query_param_name+'__istartswith': search_value})
 
         return qs.filter(search_filters)
 
