@@ -37,6 +37,7 @@ class DatatablesView(View):
     model = None
     template_name = 'datatables_view.html'
     initial_order = [[1, "asc"]]
+    length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]],
     column_defs = None
 
     def __init__(self, *args, **kwargs):
@@ -107,9 +108,19 @@ class DatatablesView(View):
             column.update(c)
 
             if c['name']:
+
+                if 'title' in c:
+                    title = c['title']
+                else:
+                    try:
+                        title = self.model._meta.get_field(c['name']).verbose_name.title()
+                    except:
+                        title = c['name']
+
                 column['name'] = c['name']
                 column['data'] = c['name']
-                column['title'] = c.get('title') if 'title' in c else self.model._meta.get_field(c['name']).verbose_name.title()
+                #column['title'] = c.get('title') if 'title' in c else self.model._meta.get_field(c['name']).verbose_name.title()
+                column['title'] = title
                 column['searchable'] = c.get('searchable', True)
                 column['orderable'] = c.get('orderable', True)
 
@@ -133,6 +144,7 @@ class DatatablesView(View):
                     'html': self.render_table(request),
                     'columns': self.list_columns(),
                     'order': self.initial_order,
+                    'length_menu': self.length_menu,
                 })
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
         else:
@@ -158,6 +170,7 @@ class DatatablesView(View):
                 'columns': self.list_columns(),
                 'column_details': mark_safe(json.dumps(self.list_columns())),
                 'initial_order': mark_safe(json.dumps(self.initial_order)),
+                'length_menu': mark_safe(json.dumps(self.length_menu)),
                 'view': self,
                 'show_date_filter': self.model._meta.get_latest_by is not None,
             },
