@@ -284,7 +284,7 @@ class DatatablesView(View):
 
         for cur_object in qs:
             retdict = {
-                fieldname: self.render_column(cur_object, fieldname)
+                fieldname: '<div class="field-%s">%s</div>' % (fieldname, self.render_column(cur_object, fieldname))
                 for fieldname in self.columns
                 if fieldname
             }
