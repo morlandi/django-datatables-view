@@ -1,0 +1,38 @@
+
+
+function datatables_bind_row_tools(table, url)
+{
+    table.on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
+        event.preventDefault();
+        var tr = $(this).closest('tr');
+        var row = table.row(tr);
+        if (row.child.isShown()) {
+            row.child.hide();
+            tr.removeClass('shown');
+        }
+        else {
+            row.child(datatables_load_row_details(row.data(), url), 'details').show('slow');
+            tr.addClass('shown');
+        }
+    });
+}
+
+function datatables_load_row_details(rowData, url) {
+    var div = $('<div/>')
+        .addClass('loading')
+        .text('Loading...');
+
+    $.ajax({
+        url: url,
+        data: {
+            action: 'details',
+            id: rowData.id
+        },
+        dataType: 'json',
+        success: function(json) {
+            div.html(json.html).removeClass('loading');
+        }
+    });
+
+    return div;
+}

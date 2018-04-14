@@ -15,6 +15,7 @@ from django.utils.decorators import method_decorator
 from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.utils.safestring import mark_safe
+from django.template.loader import render_to_string
 
 
 from .columns import Column
@@ -69,8 +70,9 @@ class DatatablesView(View):
                 'searchable': True,
                 'orderable': True,
                 'visible': True,
-                'foreign_field': None,  # example: 'manager__name'
-                'placeholder': False
+                'foreign_field': None,  # example: 'manager__name',
+                'placeholder': False,
+                'className': 'css-class-currency',
             }, {
                 'name': 'active',
                 ...
@@ -146,10 +148,40 @@ class DatatablesView(View):
                     'order': self.initial_order,
                     'length_menu': self.length_menu,
                 })
+            elif action == 'details':
+                return JsonResponse({
+                    'html': self.render_row_details(request),
+                })
+
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
         else:
             response = HttpResponse(self.render_table(request))
         return response
+
+    def render_row_details(self, request):
+        id = request.GET.get('id')
+        obj = self.model.objects.get(id=id)
+        fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
+        html = '<table class="row-details">'
+        for field in fields:
+            try:
+                value = getattr(obj, field)
+                html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
+            except:
+                pass
+        html += '</table>'
+        return html
+
+    @staticmethod
+    def render_row_tools_column_def():
+        column_def = {
+            'name': '',
+            'visible': True,
+            # https://datatables.net/blog/2017-03-31
+            'defaultContent': render_to_string('datatables_view/row_tools.html', {'foo': 'bar'}),
+            "className": 'dataTables_row-tools',
+        }
+        return column_def
 
     def render_table(self, request):
 
@@ -284,7 +316,8 @@ class DatatablesView(View):
 
         for cur_object in qs:
             retdict = {
-                fieldname: '<div class="field-%s">%s</div>' % (fieldname, self.render_column(cur_object, fieldname))
+                #fieldname: '<div class="field-%s">%s</div>' % (fieldname, self.render_column(cur_object, fieldname))
+                fieldname: self.render_column(cur_object, fieldname)
                 for fieldname in self.columns
                 if fieldname
             }

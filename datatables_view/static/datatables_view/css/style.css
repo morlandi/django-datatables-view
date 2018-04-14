@@ -1,0 +1,36 @@
+
+/*td.dataTables_row-tools {
+    cursor: pointer;
+}
+*/
+td.dataTables_row-tools .minus { display: none; }
+td.dataTables_row-tools .plus { display: inline; }
+
+tr.shown td.dataTables_row-tools .minus { display: inline; }
+tr.shown td.dataTables_row-tools .plus { display: none; }
+
+/*table.details {
+    padding-left: 80px;
+    background-color: #fff;
+}
+
+table.details td {
+    padding: 0 !important;
+    color: #999;
+}
+*/
+
+table.dataTable .row-details {
+    padding: 0;
+    margin: 0;
+    margin-left: 4px;
+    border-collapse: collapse;
+}
+
+table.dataTable .row-details tr {
+    border-bottom: 1px solid #ddd;
+}
+
+table.dataTable .row-details td {
+    padding: 6px 12px;
+}
