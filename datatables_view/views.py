@@ -150,7 +150,7 @@ class DatatablesView(View):
                 })
             elif action == 'details':
                 return JsonResponse({
-                    'html': self.render_row_details(request),
+                    'html': self.render_row_details(request.GET.get('id'), request),
                 })
 
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
@@ -158,8 +158,7 @@ class DatatablesView(View):
             response = HttpResponse(self.render_table(request))
         return response
 
-    def render_row_details(self, request):
-        id = request.GET.get('id')
+    def render_row_details(self, id, request=None):
         obj = self.model.objects.get(id=id)
         fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
         html = '<table class="row-details">'

@@ -34,3 +34,11 @@ table.dataTable .row-details tr {
 table.dataTable .row-details td {
     padding: 6px 12px;
 }
+
+/*
+    "header width issue" fix
+    https://datatables.net/forums/discussion/2148/header-width-issue
+*/
+
+div.dataTables_sort_wrapper {white-space:nowrap !important;}
+th {white-space:nowrap !important;}
