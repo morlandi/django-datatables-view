@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+{% load static i18n %}
+
+
+{% block content %}
+
+    <h1>{{title}}</h1>
+
+    <div class="datatable_block">
+        <table id="datatable" class="ui small fixed striped table dataTable no-footer" cellspacing="0" width="100%">
+            {% include 'datatables_view/datatable_inner.html' %}
+        </table>
+    </div>
+
+{% endblock content %}
+
+
+{% block extrajs %}
+    {{ block.super }}
+
+    <script language="javascript">
+
+        $(document).ready(function() {
+
+            url = "";
+            var table = $('#datatable').DataTable({
+                "processing": true,
+                "serverSide": true,
+                "scrollX": true,
+                //"lengthMenu": {{length_menu}},
+                "lengthMenu": [[10, 20, 50, 100], [10, 20, 50, 100]],
+                "ajax": {
+                    "url": url,
+                    "type": "GET",
+                    "data": function (d) {
+                        console.log(d);
+                        /*
+                        var data_da = $('#data_da').val();
+                        if (data_da) {
+                            d.filter_data_da = datepicker_to_isoformat(data_da);
+                        }
+                        var data_a = $('#data_a').val();
+                        if (data_a) {
+                            d.filter_data_a = datepicker_to_isoformat(data_a);
+                        }
+                        */
+                    }
+                },
+                "columns": {{column_details}},
+                "order": {{initial_order}}
+            });
+            datatables_bind_row_tools(table, url);
+        });
+
+
+        function load_details( rowData ) {
+            var div = $('<div/>')
+                .addClass( 'loading' )
+                .text( 'Loading...' );
+
+            $.ajax( {
+                url: '',
+                data: {
+                    action: 'details',
+                    id: rowData.id
+                },
+                dataType: 'json',
+                success: function ( json ) {
+                    div.html( json.html ).removeClass( 'loading' );
+                }
+            } );
+
+            return div;
+        }
+
+            {% comment %}
+            initialize_datepicker();
+
+            var table = $('#datatable').DataTable( {
+                "processing": true,
+                "serverSide": true,
+                // "scrollY":        "200px",
+                // "scrollCollapse": true,
+                // "paging":         false,
+                "language": {
+                    "decimal":        "",
+                    "emptyTable":     "No data available in table",
+                    "info":           "Visualizzazione pagina _PAGE_ di _PAGES_",
+                    "infoEmpty":      "Nessun dato disponibile",
+                    "infoFiltered":   "(filtrati da _MAX_ righe disponibili)",
+                    "infoPostFix":    "",
+                    "thousands":      ",",
+                    "lengthMenu":     "Visualizza _MENU_ righe",
+                    "loadingRecords": "Caricamento in corso ...",
+                    "processing":     "Elaborazione in corso ...",
+                    "search":         "Ricerca:",
+                    "zeroRecords":    "Nessun dato disponibile",
+                    "paginate": {
+                        "first":      "Primo",
+                        "last":       "Ultimo",
+                        "next":       "Successivo",
+                        "previous":   "Precedente"
+                    },
+                    "aria": {
+                        "sortAscending":  ": activate to sort column ascending",
+                        "sortDescending": ": activate to sort column descending"
+                    }
+                },
+                "scrollX": true,
+                "lengthMenu": [[20, 50, 100], [20, 50, 100]],
+                "ajax": {
+                    "url": "",
+                    "type": "GET",
+                    "data": function (d) {
+                        var data_da = $('#data_da').val();
+                        if (data_da) {
+                            d.filter_data_da = datepicker_to_isoformat(data_da);
+                        }
+                        var data_a = $('#data_a').val();
+                        if (data_a) {
+                            d.filter_data_a = datepicker_to_isoformat(data_a);
+                        }
+                    }
+                },
+                "columns": [
+                    // { "data": "id", "orderable": true },
+                    // ...
+                    {% for column in columns %}
+                        { "data": "{{column.name}}", "orderable": {{column.orderable|lower}} }{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                "order": [[{{initial_order_column_index}}, "{{initial_order_column_direction}}"]],
+                // ,"order": [[ 1, "desc" ]]
+
+                columnDefs: [
+                    { className: 'dt-body-right', targets: [0,4]},
+
+                    // {
+                    //     render: function( data, type, row, meta ) {
+                    //         if (data === 0) {
+                    //             return '<strong><i class="empty star icon"></i></strong>';
+                    //         }
+                    //         return '<strong><i class="star icon"></i></strong>';
+                    //     },
+                    //     targets: 0,
+                    //     className: 'center aligned'
+                    // },
+                ],
+                "dom": '<"toolbar">lrtip',
+                "footerCallback": function ( row, data, start, end, display ) {
+                    //var api = this.api(), data;
+                    var api = this.api();
+                    var total_html = api.ajax.json().total_html;
+                    if (total_html) {
+                        //var cell = $(api.column(0).footer()).find('.subfooter');
+                        var cell = $('.cell_total');
+                        cell.html(total_html);
+                    }
+                }
+            } );
+
+                //dom: "<'row'<'col-sm-4'l><'col-sm-4 text-center'B><'col-sm-4'f>>tp",
+                //buttons: [
+                //    {extend: 'copy',className: 'btn-sm'},
+                //    {extend: 'csv',title: 'ExampleFile', className: 'btn-sm'},
+                //    {extend: 'pdf', title: 'ExampleFile', className: 'btn-sm'}
+                //]
+
+
+
+            // Apply the search
+            // https://datatables.net/examples/api/multi_filter.html
+            table.columns().every(function () {
+                var that = this;
+                $('input', this.header())
+                    .on('keyup change', function() {
+                        if (that.search() !== this.value) {
+                            that.search( this.value ).draw();
+                        }
+                    })
+                    // .off('click')
+                    // .on('click', function(event) {
+                    //     event.preventDefault();
+                    //     console.log('click');
+                    // });
+            });
+
+            //console.log($("div.toolbar").html());
+
+            var toolbar_html = '';
+
+            {% if show_date_filter %}
+            toolbar_html += 'Da: <input type="text" id="data_da" class="datepicker">&nbsp;&nbsp;&nbsp;A: <input type="text" id="data_a" class="datepicker">&nbsp;&nbsp;&nbsp;';
+            {% endif %}
+            toolbar_html += '<button type="button" id="btn-export">Esporta</button><div class="cell_total"></div>';
+            $("div.toolbar").html(toolbar_html);
+
+            $(".datepicker").datepicker();
+            $(".datepicker").on('change', function(event) {
+                table.draw();
+            });
+
+            $('#btn-export').on('click', function(event) {
+                var params = table.ajax.params();
+                params.export = 1;
+                //alert(params);
+
+                $.ajax({
+                    type: "GET",
+                    url: "",
+                    data: params
+                    // cache: false,
+                    // crossDomain: false,
+                    // dataType: 'json',
+                    // headers: {"X-CSRFToken": getCookie('csrftoken')}
+                }).done(function(data) {
+                    alert(data.task_id);
+                    console.log('data=%o', data);
+                }).fail(function(jqXHR, textStatus) {
+                    alert('FAILURE: %o', jqXHR);
+                    console.log('FAILURE: %o', jqXHR);
+                });
+            });
+
+        } );
+            {% endcomment %}
+
+    </script>
+{% endblock %}
+
+

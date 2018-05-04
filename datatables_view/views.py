@@ -36,7 +36,7 @@ class DatatablesView(View):
     searchable_columns = []
     foreign_fields = {}
     model = None
-    template_name = 'datatables_view.html'
+    template_name = 'datatables_view/datatable.html'
     initial_order = [[1, "asc"]]
     length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]],
     column_defs = None
