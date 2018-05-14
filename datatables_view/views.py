@@ -67,6 +67,7 @@ class DatatablesView(View):
 
             column_defs = [{
                 'name': 'currency',
+                'title': 'Currency',
                 'searchable': True,
                 'orderable': True,
                 'visible': True,

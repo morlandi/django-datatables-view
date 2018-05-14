@@ -36,3 +36,15 @@ function datatables_load_row_details(rowData, url) {
 
     return div;
 }
+
+function datatables_adjust_table_columns() {
+    // Adjust the column widths of all visible tables
+    // https://datatables.net/reference/api/%24.fn.dataTable.tables()
+    $.fn.dataTable
+        .tables({
+            visible: true,
+            api: true
+        })
+        .columns.adjust();
+}
+
