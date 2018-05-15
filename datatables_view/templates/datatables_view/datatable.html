@@ -35,13 +35,13 @@
                     "data": function (d) {
                         console.log(d);
                         /*
-                        var data_da = $('#data_da').val();
-                        if (data_da) {
-                            d.filter_data_da = datepicker_to_isoformat(data_da);
+                        var date_from = $('#date_from').val();
+                        if (date_from) {
+                            d.date_from = datepicker_to_isoformat(date_from);
                         }
-                        var data_a = $('#data_a').val();
-                        if (data_a) {
-                            d.filter_data_a = datepicker_to_isoformat(data_a);
+                        var date_to = $('#date_to').val();
+                        if (date_to) {
+                            d.date_to = datepicker_to_isoformat(date_to);
                         }
                         */
                     }
@@ -112,13 +112,13 @@
                     "url": "",
                     "type": "GET",
                     "data": function (d) {
-                        var data_da = $('#data_da').val();
-                        if (data_da) {
-                            d.filter_data_da = datepicker_to_isoformat(data_da);
+                        var date_from = $('#date_from').val();
+                        if (date_from) {
+                            d.date_from = datepicker_to_isoformat(date_from);
                         }
-                        var data_a = $('#data_a').val();
-                        if (data_a) {
-                            d.filter_data_a = datepicker_to_isoformat(data_a);
+                        var date_to = $('#date_to').val();
+                        if (date_to) {
+                            d.date_to = datepicker_to_isoformat(date_to);
                         }
                     }
                 },
@@ -190,7 +190,7 @@
             var toolbar_html = '';
 
             {% if show_date_filter %}
-            toolbar_html += 'Da: <input type="text" id="data_da" class="datepicker">&nbsp;&nbsp;&nbsp;A: <input type="text" id="data_a" class="datepicker">&nbsp;&nbsp;&nbsp;';
+            toolbar_html += 'From: <input type="text" id="date_from" class="datepicker">&nbsp;&nbsp;&nbsp;To: <input type="text" id="date_to" class="datepicker">&nbsp;&nbsp;&nbsp;';
             {% endif %}
             toolbar_html += '<button type="button" id="btn-export">Esporta</button><div class="cell_total"></div>';
             $("div.toolbar").html(toolbar_html);

@@ -248,6 +248,8 @@ class DatatablesView(View):
         """
 
         params = {field: int(query_dict[field]) for field in ['draw', 'start', 'length']}
+        params['date_from'] = query_dict.get('date_from', None)
+        params['date_to'] = query_dict.get('date_to', None)
 
         column_index = 0
         has_finished = False
@@ -351,6 +353,18 @@ class DatatablesView(View):
         return qs
 
     def filter_queryset(self, params, qs):
+
+        # Apply date range filters
+        get_latest_by = getattr(self.model._meta, 'get_latest_by', None)
+        if get_latest_by:
+            date_from = params.get('date_from', None)
+            if date_from:
+                dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
+                qs = qs.filter(**{get_latest_by+'__date__gte': dt})
+            date_to = params.get('date_to', None)
+            if date_to:
+                dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
+                qs = qs.filter(**{get_latest_by+'__date__lte': dt})
 
         if 'search_value' in params:
             qs = self.filter_queryset_all_columns(params['search_value'], qs)
