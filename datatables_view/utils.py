@@ -1,5 +1,6 @@
 import pprint
 from django.utils import timezone
+from django.conf import settings
 from django.utils import formats
 from .app_settings import ENABLE_TRACING
 
@@ -82,7 +83,8 @@ def format_datetime(dt, include_time=True):
 
     dt = timezone.localtime(dt)
 
-    text = formats.date_format(dt, use_l10n=True, format='SHORT_DATE_FORMAT')
+    use_l10n = getattr(settings, 'USE_L10N', False)
+    text = formats.date_format(dt, use_l10n=use_l10n, format='SHORT_DATE_FORMAT')
     if include_time:
         text += dt.strftime(' %H:%M:%S')
     return text
