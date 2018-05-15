@@ -38,13 +38,19 @@ class DatatablesView(View):
     model = None
     template_name = 'datatables_view/datatable.html'
     initial_order = [[1, "asc"]]
-    length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]],
+    length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
     column_defs = None
+    show_date_filters = None
 
     def __init__(self, *args, **kwargs):
 
         if self.column_defs:
             self.parse_column_defs(self.column_defs)
+
+        # If derived class sets 'show_date_filters', respect it;
+        # otherwise set according to model 'get_latest_by' attribute
+        if self.show_date_filters is None:
+            self.show_date_filters = getattr(self.model._meta, 'get_latest_by', None) != None
 
         columns = kwargs.pop('columns', None)
         if columns is not None:
@@ -148,6 +154,7 @@ class DatatablesView(View):
                     'columns': self.list_columns(),
                     'order': self.initial_order,
                     'length_menu': self.length_menu,
+                    'show_date_filters': self.show_date_filters,
                 })
             elif action == 'details':
                 return JsonResponse({
@@ -233,7 +240,7 @@ class DatatablesView(View):
         # Slice result
         paginator = Paginator(qs, params['length'])
         response_dict = self.get_response_dict(paginator, params['draw'], params['start'])
-        response_dict['total_html'] = self.total_html(qs, params)
+        response_dict['footer_callback_message'] = self.footer_callback_message(qs, params)
 
         return HttpResponse(
             json.dumps(
@@ -421,6 +428,7 @@ class DatatablesView(View):
 
         return qs.filter(search_filters)
 
-    def total_html(self, qs, params):
-        return 'Righe selezionate: %d' % qs.count()
+    def footer_callback_message(self, qs, params):
+        #return 'Selected rows: %d' % qs.count()
+        return ''
 
