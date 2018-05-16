@@ -13,9 +13,6 @@
         </table>
     </div>
     {% endcomment %}
-    <div id="debug">
-        ciao
-    </div>
 
     <div class="datatable_block">
         <table id="datatable" class="ui small fixed table dataTable no-footer" cellspacing="0" width="100%"></table>
@@ -31,7 +28,7 @@
     <script language="javascript">
 
         $(document).ready(function() {
-            //initialize_datatable($('#datatable'), "");
+            initialize_datatable($('#datatable'), "");
             setTimeout(function () {
                 datatables_adjust_table_columns();
             }, 1000);
@@ -48,7 +45,7 @@
                 //console.log('render data: %o', data);
                 var parent = element.parent();
 
-                element.html(data.html);
+                //element.html(data.html);
                 console.log(data.html);
 
                 var table = element.DataTable({
@@ -126,8 +123,6 @@
 
             {% comment %}
 
-
-
             // Apply the search
             // https://datatables.net/examples/api/multi_filter.html
             table.columns().every(function () {
@@ -144,7 +139,6 @@
                     //     console.log('click');
                     // });
             });
-
 
             $('#btn-export').on('click', function(event) {
                 var params = table.ajax.params();
