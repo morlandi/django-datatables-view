@@ -67,13 +67,13 @@ Example:
 
 
 
-DatatablesView-derived views
-----------------------------
+Basic DatatablesView-derived view
+---------------------------------
 
-To provide server-side rendering of a Django Model, we need a specific
+To provide server-side rendering of a Django Model, you need a specific
 view which will be called via Ajax by the frontend.
 
-At the very minimum, we shoud specify a suitable `column_defs` list.
+At the very minimum, you shoud specify a suitable `column_defs` list.
 
 Example:
 
@@ -100,35 +100,104 @@ Example:
     from django.utils.decorators import method_decorator
 
     from datatables_view.views import DatatablesView
-    from backend.models import Program
+    from backend.models import Register
 
 
     @method_decorator(login_required, name='dispatch')
-    class ProgramDatatablesView(DatatablesView):
+    class RegisterDatatablesView(DatatablesView):
 
-        model = Program
-        title = 'Programs'
+        model = Register
+        title = 'Registers'
 
         column_defs = [
             {
                 'name': 'id',
                 'visible': False,
             }, {
-                'name': 'start_datetime',
+                'name': 'created',
             }, {
-                'name': 'end_datetime',
+                'name': 'type',
             }, {
-                'name': 'favourite',
+                'name': 'address',
+            }, {
+                'name': 'readonly',
+            }, {
+                'name': 'min',
+            }, {
+                'name': 'max',
+            }, {
+                'name': 'widget_type',
             }
         ]
 
-In the previous example, row id is included in the first column, but hidden to the user.
+
+In the previous example, row id is included in the first column of the table,
+but hidden to the user.
+
+DatatablesView will serialize the required data during table navigation;
+in order to render the initial site page, you need another "application" view,
+normally based on a template.
+
+In the template, insert a <table> handler and connect it to the DataTable machinery,
+as show below.
+
+The first ajax call (identified by the `action=initialize` parameter) will provide
+to DataTable the suitable columns specifications (and other details) based on the
+`column_defs` previously defined.
+
+`register_list.html`
+
+.. code:: html
+
+    <table id="datatable_register" width="100%" class="table table-striped table-bordered table-hover dataTables-example">
+    </table>
+
+    ...
+
+    <script language="javascript">
+        $( document ).ready(function() {
+
+            var url = "{% url 'frontend:datatable_register' %}";
+            var table_selector = '#datatable_register';
+
+            $.ajax({
+                type: 'GET',
+                url: url + '?action=initialize',
+                dataType: 'json'
+            }).done(function(data, textStatus, jqXHR) {
+                var table = $(table_selector).DataTable({
+                    "processing": true,
+                    "serverSide": true,
+                    "scrollX": true,
+                    "ajax": {
+                        "url": url,
+                        "type": "GET"
+                    },
+                    "columns": data.columns,
+                    "order": data.order,
+                });
+            });
+        });
+    </script>
 
 .. image:: screenshots/001.png
+
+This strategy allows one or more dynamic tables in the same page.
+
+In simpler situations, where only one table is needed, you can use a single view
+(the one derived from DatatablesView); the rendered page is based on the default
+templage `datatables_view/database.html`, unless overridden.
+
 
 Class attributes
 ----------------
 
+    model = None
+    template_name = 'datatables_view/datatable.html'
+    initial_order = [[1, "asc"]]
+    length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
+    column_defs = None
+    show_date_filters = None
 
 column_defs customizations
 --------------------------

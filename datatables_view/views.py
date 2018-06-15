@@ -142,15 +142,11 @@ class DatatablesView(View):
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         if request.is_ajax():
-            # # if settings.DEBUG:
-            # #     trace(str(self.request.GET))
-            # if 'export' in request.GET:
-            #     return self.export_data(request)
             action = request.GET.get('action', '')
 
-            if action == 'render':
+            # TODO: remove 'render' legacy value
+            if action in ['initialize', 'render', ]:
                 return JsonResponse({
-                    'html': self.render_table(request),
                     'columns': self.list_columns(),
                     'order': self.initial_order,
                     'length_menu': self.length_menu,
@@ -194,14 +190,14 @@ class DatatablesView(View):
 
         template_name = self.template_name
 
-        # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
-        if request.is_ajax():
-            template_name = getattr(self, 'ajax_template_name', '')
-            if not template_name:
-                split = self.template_name.split('.html')
-                split[-1] = '_inner'
-                split.append('.html')
-                template_name = ''.join(split)
+        # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
+        # if request.is_ajax():
+        #     template_name = getattr(self, 'ajax_template_name', '')
+        #     if not template_name:
+        #         split = self.template_name.split('.html')
+        #         split[-1] = '_inner'
+        #         split.append('.html')
+        #         template_name = ''.join(split)
 
         html = render_to_string(
             template_name, {
