@@ -18,12 +18,14 @@ Install the package by running:
 
     pip install git+https://github.com/morlandi/django-datatables-view
 
-Add 'datatables_view' to your INSTALLED_APPS:
+then add 'datatables_view' to your INSTALLED_APPS:
 
-INSTALLED_APPS = [
-    ...
-    'datatables_view',
-]
+.. code:: bash
+
+    INSTALLED_APPS = [
+        ...
+        'datatables_view',
+    ]
 
 
 Pre-requisites
@@ -108,19 +110,32 @@ Example:
         title = 'Programs'
 
         column_defs = [
-            DatatablesView.render_row_tools_column_def(),
-        {
-            'name': 'id',
-            'visible': True,
-        }, {
-            'name': 'start_datetime',
-        }, {
-            'name': 'end_datetime',
-        }, {
-            'name': 'favourite',
-        }]
+            {
+                'name': 'id',
+                'visible': False,
+            }, {
+                'name': 'start_datetime',
+            }, {
+                'name': 'end_datetime',
+            }, {
+                'name': 'favourite',
+            }
+        ]
+
+In the previous example, row id is included in the first column, but hidden to the user.
+
+.. image:: screenshots/001.png
+
+Class attributes
+----------------
 
 
+column_defs customizations
+--------------------------
+
+
+Debugging
+---------
 
 DATATABLES_VIEW_ENABLE_TRACING = True
 
