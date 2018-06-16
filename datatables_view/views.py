@@ -26,8 +26,9 @@ from .columns import Order
 from .exceptions import ColumnOrderError
 from .utils import prettyprint_queryset
 from .utils import trace
-from .utils import trace_func
 from .app_settings import MAX_COLUMNS
+from .app_settings import ENABLE_QUERYSET_TRACING
+from .app_settings import ENABLE_QUERYDICT_TRACING
 
 
 class DatatablesView(View):
@@ -102,9 +103,6 @@ class DatatablesView(View):
         columns = []
         for c in self.column_defs:
 
-            # name = c.get('name', '')
-            # import ipdb; ipdb.set_trace()
-
             column = {
                 #'name': '',
                 'data': None,
@@ -135,7 +133,8 @@ class DatatablesView(View):
 
             columns.append(column)
 
-        trace(columns, prompt='list_columns()')
+        if ENABLE_QUERYDICT_TRACING:
+            trace(columns, prompt='list_columns()')
 
         return columns
 
@@ -225,13 +224,15 @@ class DatatablesView(View):
         except ValueError:
             return HttpResponseBadRequest()
 
-        trace(query_dict, prompt='query_dict')
-        trace(params, prompt='params')
+        if ENABLE_QUERYDICT_TRACING:
+            trace(query_dict, prompt='query_dict')
+            trace(params, prompt='params')
 
         # Prepare the queryset and apply the search and order filters
         qs = self.get_initial_queryset(request)
         qs = self.prepare_queryset(params, qs)
-        prettyprint_queryset(qs, prompt='queryset')
+        if ENABLE_QUERYSET_TRACING:
+            prettyprint_queryset(qs)
 
         # Slice result
         paginator = Paginator(qs, params['length'])
@@ -427,4 +428,3 @@ class DatatablesView(View):
     def footer_callback_message(self, qs, params):
         #return 'Selected rows: %d' % qs.count()
         return ''
-
