@@ -14,7 +14,7 @@ except ImportError:
 
 
 def trace(message, prompt=''):
-    print('\x1b[1;36;40mm', end='')
+    print('\x1b[1;36;40m', end='')
     if prompt:
         print(prompt + ':')
     pprint.pprint(message)

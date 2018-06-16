@@ -422,9 +422,11 @@ this setting::
 
     DATATABLES_VIEW_ENABLE_QUERYDICT_TRACING = True
 
-The resulting query can be traced as well with::
+The resulting query (before pagination) can be traced as well with::
 
     DATATABLES_VIEW_ENABLE_QUERYSET_TRACING = True
+
+.. image:: screenshots/007.png
 
 Snippets
 --------
