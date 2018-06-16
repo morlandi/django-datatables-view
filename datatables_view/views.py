@@ -94,7 +94,8 @@ class DatatablesView(View):
         for column_def in column_defs:
             name = column_def['name']
             self.columns.append(name)
-            if column_def.get('searchable', True if name else False):
+            visible = column_def.get('visible', True)
+            if column_def.get('searchable', True if name and visible else False):
                 self.searchable_columns.append(name)
             if column_def.get('foreign_field', None):
                 self.foreign_fields[name] = column_def['foreign_field']
@@ -128,8 +129,8 @@ class DatatablesView(View):
                 column['data'] = c['name']
                 #column['title'] = c.get('title') if 'title' in c else self.model._meta.get_field(c['name']).verbose_name.title()
                 column['title'] = title
-                column['searchable'] = c.get('searchable', True)
-                column['orderable'] = c.get('orderable', True)
+                column['searchable'] = c.get('searchable', column['visible'])
+                column['orderable'] = c.get('orderable', column['visible'])
 
             columns.append(column)
 
