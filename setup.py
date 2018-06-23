@@ -26,5 +26,6 @@ setup(name='django-datatables-view',
       author='Mario Orlandi',
       author_email='morlandi@brainstorm.it',
       license='MIT',
+      include_package_data=True,
       packages=find_packages(),
       zip_safe=False)

@@ -26,8 +26,9 @@ from .columns import Order
 from .exceptions import ColumnOrderError
 from .utils import prettyprint_queryset
 from .utils import trace
-from .utils import trace_func
 from .app_settings import MAX_COLUMNS
+from .app_settings import ENABLE_QUERYSET_TRACING
+from .app_settings import ENABLE_QUERYDICT_TRACING
 
 
 class DatatablesView(View):
@@ -93,7 +94,8 @@ class DatatablesView(View):
         for column_def in column_defs:
             name = column_def['name']
             self.columns.append(name)
-            if column_def.get('searchable', True if name else False):
+            visible = column_def.get('visible', True)
+            if column_def.get('searchable', True if name and visible else False):
                 self.searchable_columns.append(name)
             if column_def.get('foreign_field', None):
                 self.foreign_fields[name] = column_def['foreign_field']
@@ -101,9 +103,6 @@ class DatatablesView(View):
     def list_columns(self):
         columns = []
         for c in self.column_defs:
-
-            # name = c.get('name', '')
-            # import ipdb; ipdb.set_trace()
 
             column = {
                 #'name': '',
@@ -130,27 +129,24 @@ class DatatablesView(View):
                 column['data'] = c['name']
                 #column['title'] = c.get('title') if 'title' in c else self.model._meta.get_field(c['name']).verbose_name.title()
                 column['title'] = title
-                column['searchable'] = c.get('searchable', True)
-                column['orderable'] = c.get('orderable', True)
+                column['searchable'] = c.get('searchable', column['visible'])
+                column['orderable'] = c.get('orderable', column['visible'])
 
             columns.append(column)
 
-        trace(columns, prompt='list_columns()')
+        if ENABLE_QUERYDICT_TRACING:
+            trace(columns, prompt='list_columns()')
 
         return columns
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         if request.is_ajax():
-            # # if settings.DEBUG:
-            # #     trace(str(self.request.GET))
-            # if 'export' in request.GET:
-            #     return self.export_data(request)
             action = request.GET.get('action', '')
 
-            if action == 'render':
+            # TODO: remove 'render' legacy value
+            if action in ['initialize', 'render', ]:
                 return JsonResponse({
-                    'html': self.render_table(request),
                     'columns': self.list_columns(),
                     'order': self.initial_order,
                     'length_menu': self.length_menu,
@@ -194,14 +190,14 @@ class DatatablesView(View):
 
         template_name = self.template_name
 
-        # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
-        if request.is_ajax():
-            template_name = getattr(self, 'ajax_template_name', '')
-            if not template_name:
-                split = self.template_name.split('.html')
-                split[-1] = '_inner'
-                split.append('.html')
-                template_name = ''.join(split)
+        # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
+        # if request.is_ajax():
+        #     template_name = getattr(self, 'ajax_template_name', '')
+        #     if not template_name:
+        #         split = self.template_name.split('.html')
+        #         split[-1] = '_inner'
+        #         split.append('.html')
+        #         template_name = ''.join(split)
 
         html = render_to_string(
             template_name, {
@@ -229,13 +225,15 @@ class DatatablesView(View):
         except ValueError:
             return HttpResponseBadRequest()
 
-        trace(query_dict, prompt='query_dict')
-        trace(params, prompt='params')
+        if ENABLE_QUERYDICT_TRACING:
+            trace(query_dict, prompt='query_dict')
+            trace(params, prompt='params')
 
         # Prepare the queryset and apply the search and order filters
         qs = self.get_initial_queryset(request)
         qs = self.prepare_queryset(params, qs)
-        prettyprint_queryset(qs, prompt='queryset')
+        if ENABLE_QUERYSET_TRACING:
+            prettyprint_queryset(qs)
 
         # Slice result
         paginator = Paginator(qs, params['length'])
@@ -431,4 +429,3 @@ class DatatablesView(View):
     def footer_callback_message(self, qs, params):
         #return 'Selected rows: %d' % qs.count()
         return ''
-

@@ -1,0 +1,569 @@
+
+Django Datatables Server-Side
+=============================
+
+This package provides an easy way to process Datatables queries in the server-side mode.
+
+Adapted from:
+
+https://github.com/monnierj/django-datatables-server-side
+
+
+Installation
+------------
+
+Install the package by running:
+
+.. code:: bash
+
+    pip install git+https://github.com/morlandi/django-datatables-view
+
+then add 'datatables_view' to your INSTALLED_APPS:
+
+.. code:: bash
+
+    INSTALLED_APPS = [
+        ...
+        'datatables_view',
+    ]
+
+
+Pre-requisites
+--------------
+
+Your base template should include what required by `datatables.net`, plus:
+
+- /static/datatables_view/css/style.css
+- /static/datatables_view/js/datatables_utils.js
+
+Example:
+
+.. code:: html
+
+    {% block extrastyle %}
+
+        <link href="{% static 'datatables_view/css/style.css' %}" rel="stylesheet" />
+
+        <link rel='stylesheet' href="{% static 'datatables.net-bs/css/dataTables.bootstrap.min.css' %}"></script>
+        <link rel='stylesheet' href="{% static 'datatables.net-buttons-bs/css/buttons.bootstrap.min.css' %}"></script>
+
+    {% endblock extrastyle %}
+
+    {% block extrajs %}
+
+        <script type="text/javascript" src="{% static 'datatables_view/js/datatables_utils.js' %}"></script>
+
+        <script src="{% static 'datatables.net/js/jquery.dataTables.min.js' %}"></script>
+        <script src="{% static 'datatables.net-bs/js/dataTables.bootstrap.min.js' %}"></script>
+        <script src="{% static 'datatables.net-buttons/js/dataTables.buttons.min.js' %}"></script>
+        <script src="{% static 'datatables.net-buttons/js/buttons.print.min.js' %}"></script>
+        <script src="{% static 'datatables.net-buttons/js/buttons.html5.min.js' %}"></script>
+        <script src="{% static 'datatables.net-buttons-bs/js/buttons.bootstrap.min.js' %}"></script>
+        <script src="{% static 'jszip/dist/jszip.min.js' %}"></script>
+        <script src="{% static 'pdfmake/build/pdfmake.min.js' %}"></script>
+        <script src="{% static 'pdfmake/build/vfs_fonts.js' %}"></script>
+
+    {% endcompress %}
+
+
+
+Basic DatatablesView
+--------------------
+
+To provide server-side rendering of a Django Model, you need a specific
+view which will be called multiple times via Ajax during data navigation.
+
+At the very minimum, you shoud specify a suitable `column_defs` list.
+
+Example:
+
+`urls.py`
+
+.. code:: python
+
+    from django.urls import path
+    from . import datatables_views
+
+    app_name = 'frontend'
+
+    urlpatterns = [
+        ...
+        path('datatable/program/', datatables_views.ProgramDatatablesView.as_view(), name="datatable_program"),
+    ]
+
+
+`datatables_views.py`
+
+.. code:: python
+
+    from django.contrib.auth.decorators import login_required
+    from django.utils.decorators import method_decorator
+
+    from datatables_view.views import DatatablesView
+    from backend.models import Register
+
+
+    @method_decorator(login_required, name='dispatch')
+    class RegisterDatatablesView(DatatablesView):
+
+        model = Register
+        title = 'Registers'
+
+        column_defs = [
+            {
+                'name': 'id',
+                'visible': False,
+            }, {
+                'name': 'created',
+            }, {
+                'name': 'type',
+            }, {
+                'name': 'address',
+            }, {
+                'name': 'readonly',
+            }, {
+                'name': 'min',
+            }, {
+                'name': 'max',
+            }, {
+                'name': 'widget_type',
+            }
+        ]
+
+
+In the previous example, row id is included in the first column of the table,
+but hidden to the user.
+
+DatatablesView will serialize the required data during table navigation;
+in order to render the initial site page, you need another "application" view,
+normally based on a template.
+
+In the template, insert a <table> element and connect it to the DataTable machinery,
+as show below.
+
+The first ajax call (identified by the `action=initialize` parameter) will render
+the initial table layout, providing to DataTable the suitable columns specifications
+(and other details) based on the `column_defs` previously defined.
+
+`register_list.html`
+
+.. code:: html
+
+    <table id="datatable_register" width="100%" class="table table-striped table-bordered table-hover dataTables-example">
+    </table>
+
+    ...
+
+    <script language="javascript">
+
+        $( document ).ready(function() {
+            initialize_datatable($('#datatable_register'), "{% url 'frontend:datatable_register' %}");
+        });
+
+        function initialize_datatable(element, url) {
+
+            $.ajax({
+                type: 'GET',
+                url: url + '?action=initialize',
+                dataType: 'json'
+            }).done(function(data, textStatus, jqXHR) {
+                var table = element.DataTable({
+                    "processing": true,
+                    "serverSide": true,
+                    "scrollX": true,
+                    "ajax": {
+                        "url": url,
+                        "type": "GET"
+                    },
+                    "columns": data.columns,
+                    "order": data.order,
+                });
+            });
+
+        }
+
+    </script>
+
+This is the resulting table:
+
+.. image:: screenshots/001.png
+
+This strategy allows the placement of one or more dynamic tables in the same page.
+
+In simpler situations, where only one table is needed, you can use a single view
+(the one derived from DatatablesView); the rendered page is based on the default
+template `datatables_view/database.html`, unless overridden.
+
+
+Class attributes
+----------------
+
+Required:
+
+    - model
+    - column_defs
+
+Optional:
+
+    - template_name = 'datatables_view/datatable.html'
+    - initial_order = [[1, "asc"]]
+    - length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
+    - show_date_filters = None
+
+
+column_defs customizations
+--------------------------
+
+Example::
+
+    column_defs = [{
+        'name': 'currency',
+        'title': 'Currency',
+        'searchable': True,
+        'orderable': True,
+        'visible': True,
+        'foreign_field': 'manager__name',
+        'placeholder': False,
+        'className': 'css-class-currency',
+    }, {
+        ...
+
+Notes:
+
+    - **title**: if not supplied, the verbose name of the model column (when available)
+      or **name** will be used
+
+Computed (placeholder) columns
+------------------------------
+
+You can insert placeholder columns in the table, and feed their content with
+arbitrary HTML.
+
+Example:
+
+.. code:: python
+
+    @method_decorator(login_required, name='dispatch')
+    class RegisterDatatablesView(DatatablesView):
+
+        model = Register
+        title = _('Registers')
+
+        column_defs = [
+            {
+                'name': 'id',
+                'visible': False,
+            }, {
+                'name': 'created',
+            }, {
+                'name': 'dow',
+                'title': 'Day of week',
+                'placeholder': True,
+                'searchable': False,
+                'orderable': False,
+                'className': 'highlighted',
+            }, {
+                ...
+            }
+        ]
+
+        def customize_row(self, row, obj):
+            days = ['monday', 'tuesday', 'wednesday', 'thyrsday', 'friday', 'saturday', 'sunday']
+            if obj.created is not None:
+                row['dow'] = '<b>%s</b>' % days[obj.created.weekday()]
+            else:
+                row['dow'] = ''
+            return
+
+.. image:: screenshots/003.png
+
+Add row tools as first column
+-----------------------------
+
+You can insert **DatatablesView.render_row_tools_column_def()** as the first element
+in `column_defs` to obtain some tools at the beginning of each table row.
+
+`datatables_views.py`
+
+.. code:: python
+
+    from django.contrib.auth.decorators import login_required
+    from django.utils.decorators import method_decorator
+
+    from datatables_view.views import DatatablesView
+    from backend.models import Register
+
+
+    @method_decorator(login_required, name='dispatch')
+    class RegisterDatatablesView(DatatablesView):
+
+        model = Register
+        title = 'Registers'
+
+        column_defs = [
+            DatatablesView.render_row_tools_column_def(),
+            {
+                'name': 'id',
+                'visible': False,
+            }, {
+            ...
+
+By default, these tools will provide an icon to show and hide a detailed view
+below each table row.
+
+The tools are rendered according to the template **datatables_view/row_tools.html**,
+which can be overridden.
+
+Row details are automatically collected via Ajax by calling again the views
+with a specific **?action=details** parameters, and will be rendered by the
+method::
+
+    def render_row_details(self, id, request=None)
+
+which you can customize as needed
+
+.. image:: screenshots/002.png
+
+To activate row tools, you need to call **datatables_bind_row_tools()** helper
+after each table refresh, as shown below:
+
+.. code:: html
+
+    <table id="datatable_register" width="100%" class="table table-striped table-bordered table-hover dataTables-example">
+    </table>
+
+    ...
+
+    <script language="javascript">
+
+        var table = $(table_selector).DataTable({
+            ...
+        });
+        datatables_bind_row_tools(table, url);
+
+    </script>
+
+
+Overridable DatatablesView methods
+----------------------------------
+
+get_initial_queryset()
+......................
+
+Provides the queryset to work with; defaults to **self.model.objects.all()**
+
+Example:
+
+.. code:: python
+
+    def get_initial_queryset(self, request=None):
+        if not request.user.view_all_clients:
+            queryset = request.user.related_clients.all()
+        else:
+            queryset = super().get_initial_queryset(request)
+        return queryset
+
+customize_row()
+...............
+
+Called every time a new data row is required by the client, to let you further
+customize cell content
+
+Example:
+
+.. code:: python
+
+    def customize_row(self, row, obj):
+        # 'row' is a dictionary representing the current row, and 'obj' is the current object.
+        row['code'] = '<a class="client-status client-status-%s" href="%s">%s</a>' % (
+            obj.status,
+            reverse('frontend:client-detail', args=(obj.id,)),
+            obj.code
+        )
+        if obj.recipe is not None:
+            row['recipe'] = obj.recipe.display_as_tile() + ' ' + str(obj.recipe)
+        return
+
+render_row_details()
+....................
+
+Renders an HTML fragment to show table row content in "detailed view" fashion,
+as previously explained in **Add row tools as first column**.
+
+Example:
+
+.. code:: python
+
+    def render_row_details(self, id, request=None):
+        client = self.model.objects.get(id=id)
+        ...
+        return render_to_string('frontend/pages/includes/client_row_details.html', {
+            'client': client,
+            ...
+        })
+
+Debugging
+---------
+
+In case of errors, Datatables.net shows an alert popup:
+
+.. image:: screenshots/006.png
+
+You can change it to trace the error in the browser console, insted:
+
+.. code:: javascript
+
+    // change DataTables' error reporting mechanism to throw a Javascript
+    // error to the browser's console, rather than alerting it.
+    $.fn.dataTable.ext.errMode = 'throw';
+
+All details of Datatables.net requests can be logged to the console by activating
+this setting::
+
+    DATATABLES_VIEW_ENABLE_QUERYDICT_TRACING = True
+
+The resulting query (before pagination) can be traced as well with::
+
+    DATATABLES_VIEW_ENABLE_QUERYSET_TRACING = True
+
+.. image:: screenshots/007.png
+
+Snippets
+--------
+
+Workaround: Adjust the column widths of all visible tables
+..........................................................
+
+.. code:: javascript
+
+    setTimeout(function () {
+        datatables_adjust_table_columns();
+    }, 1000);
+
+Redraw all tables
+.................
+
+.. code:: javascript
+
+    $.fn.dataTable.tables({
+        api: true
+    }).draw();
+
+change DataTables' error reporting mechanism
+............................................
+
+.. code:: javascript
+
+    // change DataTables' error reporting mechanism to throw a Javascript
+    // error to the browser's console, rather than alerting it.
+    $.fn.dataTable.ext.errMode = 'throw';
+
+App settings
+------------
+
+DATATABLES_VIEW_MAX_COLUMNS
+
+    Default: 30
+
+DATATABLES_VIEW_ENABLE_QUERYDICT_TRACING
+
+    When True, enables debug tracing of datatables requests
+
+    Default: False
+
+DATATABLES_VIEW_ENABLE_QUERYSET_TRACING
+
+    When True, enables debug tracing of resulting query
+
+    Default: False
+
+
+Filter data by date range
+-------------------------
+
+When the model provides a get_latest_by field (self.model._meta, 'get_latest_by'),
+DatatablesView receives and elaborates additional parameters to further filter queryset on
+date range (unless show_date_filters is set to False).
+
+You are responsible for providing the necessary user interface tools as follows:
+
+.. code:: javascript
+
+    <script>
+        var parent = element.parent();
+        var table = element.DataTable({
+            ...
+            "dom": '<"toolbar">lrftip',
+            "ajax": {
+                "url": url,
+                "type": "GET",
+                "data": function (d) {
+                    d.date_from = $('#date_from').val();
+                    d.date_to = $('#date_to').val();
+                    console.log('d: %o', d);
+                }
+            },
+            ...
+        });
+        datatables_bind_row_tools(table, url);
+
+        if (data.show_date_filters) {
+            parent.find(".toolbar").html(
+                '<div class="daterange" style="float: left; margin-right: 6px;">' +
+                'From: <input type="date" id="date_from" class="datepicker">' +
+                'To: <input type="date" id="date_to" class="datepicker">' +
+                '</div>'
+            );
+            $('#date_from, #date_to').on('change', function(event) {
+                table.draw();
+            });
+        }
+    </script>
+
+A <div class="toolbar"> element is added to the top of the table, and later
+populated with datepicker widgets.
+
+After change, the table is redrawn, including datepickers values in the Ajax request.
+
+The DatatablesView does the rest.
+
+.. image:: screenshots/004.png
+
+
+Adding extra into to table footer
+---------------------------------
+
+A **footer_callback_message()** method is provided to enrich table footer with
+custom informations.
+
+You must override it to define the content to be show; for example:
+
+.. code:: python
+
+    def footer_callback_message(self, qs, params):
+        return 'Selected rows: %d' % qs.count()
+
+and link a specific html element to the "footerCallback" signal:
+
+.. code:: html
+
+    <table id="datatable" width="100%" class="table table-striped table-bordered table-hover dataTables-example">
+    </table>
+    <div id="extra_footer" style="color: blue;"></div>
+
+.. code:: javascript
+
+    <script>
+
+        var table = element.DataTable({
+            ...
+            "footerCallback": function (row, data, start, end, display) {
+                var footer_callback_message = this.api().ajax.json().footer_callback_message;
+                if (footer_callback_message) {
+                    $('#extra_footer').html(footer_callback_message);
+                }
+            }
+
+    </script>
+
+.. image:: screenshots/005.png

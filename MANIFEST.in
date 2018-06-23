@@ -1,0 +1,3 @@
+include README.rst
+recursive-include datatables_view/static *
+recursive-include datatables_view/templates *
