@@ -530,7 +530,7 @@ The DatatablesView does the rest.
 .. image:: screenshots/004.png
 
 
-Adding extra into to table footer
+Adding extra info to table footer
 ---------------------------------
 
 A **footer_callback_message()** method is provided to enrich table footer with
