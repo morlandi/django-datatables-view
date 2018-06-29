@@ -175,6 +175,7 @@ the initial table layout, providing to DataTable the suitable columns specificat
                         "url": url,
                         "type": "GET"
                     },
+                    "lengthMenu": data.length_menu,
                     "columns": data.columns,
                     "order": data.order,
                 });
@@ -448,6 +449,19 @@ Redraw all tables
     $.fn.dataTable.tables({
         api: true
     }).draw();
+
+Redraw table holding the current paging position
+................................................
+
+.. code:: javascript
+
+    table = $(element).closest('table.dataTable');
+    $.ajax({
+        type: 'GET',
+        url: ...
+    }).done(function(data, textStatus, jqXHR) {
+        table.DataTable().ajax.reload(null, false);
+    });
 
 change DataTables' error reporting mechanism
 ............................................
