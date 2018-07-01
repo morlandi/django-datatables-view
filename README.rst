@@ -135,8 +135,8 @@ In the previous example, row id is included in the first column of the table,
 but hidden to the user.
 
 DatatablesView will serialize the required data during table navigation;
-in order to render the initial site page, you need another "application" view,
-normally based on a template.
+in order to render the initial web page which should contain the table,
+you need another "application" view, normally based on a template.
 
 In the template, insert a <table> element and connect it to the DataTable machinery,
 as show below.
@@ -429,49 +429,6 @@ The resulting query (before pagination) can be traced as well with::
 
 .. image:: screenshots/007.png
 
-Snippets
---------
-
-Workaround: Adjust the column widths of all visible tables
-..........................................................
-
-.. code:: javascript
-
-    setTimeout(function () {
-        datatables_adjust_table_columns();
-    }, 1000);
-
-Redraw all tables
-.................
-
-.. code:: javascript
-
-    $.fn.dataTable.tables({
-        api: true
-    }).draw();
-
-Redraw table holding the current paging position
-................................................
-
-.. code:: javascript
-
-    table = $(element).closest('table.dataTable');
-    $.ajax({
-        type: 'GET',
-        url: ...
-    }).done(function(data, textStatus, jqXHR) {
-        table.DataTable().ajax.reload(null, false);
-    });
-
-change DataTables' error reporting mechanism
-............................................
-
-.. code:: javascript
-
-    // change DataTables' error reporting mechanism to throw a Javascript
-    // error to the browser's console, rather than alerting it.
-    $.fn.dataTable.ext.errMode = 'throw';
-
 App settings
 ------------
 
@@ -581,3 +538,263 @@ and link a specific html element to the "footerCallback" signal:
     </script>
 
 .. image:: screenshots/005.png
+
+
+Snippets
+--------
+
+Workaround: Adjust the column widths of all visible tables
+..........................................................
+
+.. code:: javascript
+
+    setTimeout(function () {
+        datatables_adjust_table_columns();
+    }, 1000);
+
+where:
+
+.. code:: javascript
+
+    function datatables_adjust_table_columns() {
+        // Adjust the column widths of all visible tables
+        // https://datatables.net/reference/api/%24.fn.dataTable.tables()
+        $.fn.dataTable
+            .tables({
+                visible: true,
+                api: true
+            })
+            .columns.adjust();
+    }
+
+Redraw all tables
+.................
+
+.. code:: javascript
+
+    $.fn.dataTable.tables({
+        api: true
+    }).draw();
+
+Redraw table holding the current paging position
+................................................
+
+.. code:: javascript
+
+    table = $(element).closest('table.dataTable');
+    $.ajax({
+        type: 'GET',
+        url: ...
+    }).done(function(data, textStatus, jqXHR) {
+        table.DataTable().ajax.reload(null, false);
+    });
+
+change DataTables' error reporting mechanism
+............................................
+
+.. code:: javascript
+
+    // change DataTables' error reporting mechanism to throw a Javascript
+    // error to the browser's console, rather than alerting it.
+    $.fn.dataTable.ext.errMode = 'throw';
+
+
+Application examples
+--------------------
+
+Customize row details by rendering prettified json fields
+.........................................................
+
+.. code:: python
+
+    import jsonfield
+    from datatables_view.views import DatatablesView
+    from .utils import json_prettify
+
+
+    class MyDatatablesView(DatatablesView):
+
+        ...
+
+        def render_row_details(self, id, request=None):
+
+            obj = self.model.objects.get(id=id)
+            fields = [f for f in self.model._meta.get_fields() if f.concrete]
+            html = '<table class="row-details">'
+            for field in fields:
+                value = getattr(obj, field.name)
+                if isinstance(field, jsonfield.JSONField):
+                    value = json_prettify(value)
+                html += '<tr><td>%s</td><td>%s</td></tr>' % (field.name, value)
+            html += '</table>'
+            return html
+
+where:
+
+.. code:: python
+
+    import json
+    from pygments import highlight
+    from pygments.lexers import JsonLexer
+    from pygments.formatters import HtmlFormatter
+    from django.utils.safestring import mark_safe
+
+
+    def json_prettify_styles():
+        """
+        Used to generate Pygment styles (to be included in a .CSS file) as follows:
+            print(json_prettify_styles())
+        """
+        formatter = HtmlFormatter(style='colorful')
+        return formatter.get_style_defs()
+
+
+    def json_prettify(json_data):
+        """
+        Adapted from:
+        https://www.pydanny.com/pretty-formatting-json-django-admin.html
+        """
+
+        # Get the Pygments formatter
+        formatter = HtmlFormatter(style='colorful')
+
+        # Highlight the data
+        json_text = highlight(
+            json.dumps(json_data, indent=2),
+            JsonLexer(),
+            formatter
+        )
+
+        # # remove leading and trailing brances
+        # json_text = json_text \
+        #     .replace('<span class="p">{</span>\n', '') \
+        #     .replace('<span class="p">}</span>\n', '')
+
+        # Get the stylesheet
+        #style = "<style>" + formatter.get_style_defs() + "</style>"
+        style = ''
+
+        # Safe the output
+        return mark_safe(style + json_text)
+
+
+Change row color based on row content
+.....................................
+
+.. code:: javascript
+
+    var table = element.DataTable({
+        ...
+    });
+
+    table.on('draw.dt', function(event) {
+        onTableDraw(event);
+    });
+
+where:
+
+.. code:: javascript
+
+    var onTableDraw = function (event) {
+
+        var html_table = $(event.target);
+        html_table.find('tr').each(function(index, item) {
+
+            try {
+                var row = $(item);
+                text = row.children('td.error_counter').first().text();
+                var error_counter = isNaN(text) ? 0 : parseInt(text);
+
+                if (error_counter > 0) {
+                    row.addClass('bold');
+                }
+                else {
+                    row.addClass('grayed');
+                }
+            }
+                catch(err) {
+            }
+
+        });
+    }
+
+Modify table content on the fly (via ajax)
+..........................................
+
+Row details customization:
+
+.. code:: javascript
+
+    def render_row_details(self, id, request=None):
+
+        obj = self.model.objects.get(id=id)
+        html = '<table class="row-details">'
+        html += "<tr><td>alarm status:</td><td>"
+        for choice in BaseTask.ALARM_STATUS_CHOICES:
+            # Lo stato corrente lo visualizziamo in grassetto
+            if choice[0] == obj.alarm:
+                html += '<b>%s</b>&nbsp;' % (choice[1])
+            else:
+                # Se non "unalarmed", mostriamo i link per cambiare lo stato
+                # (tutti tranne "unalarmed")
+                if obj.alarm != BaseTask.ALARM_STATUS_UNALARMED and choice[0] != BaseTask.ALARM_STATUS_UNALARMED:
+                    html += '<a class="set-alarm" href="#" onclick="set_row_alarm(this, \'%s\', %d); return false">%s</a>&nbsp;' % (
+                        str(obj.id),
+                        choice[0],
+                        choice[1]
+                    )
+        html += '</td></tr>'
+
+Client-side code:
+
+.. code:: javascript
+
+    <script language="javascript">
+
+        function set_row_alarm(element, task_id, value) {
+            $("body").css("cursor", "wait");
+            //console.log('set_row_alarm: %o %o %o', element, task_id, value);
+            table = $(element).closest('table.dataTable');
+            //console.log('table id: %o', table.attr('id'));
+
+            $.ajax({
+                type: 'GET',
+                url: sprintf('/set_alarm/%s/%s/%d/', table.attr('id'), task_id, value),
+                dataType: 'html'
+            }).done(function(data, textStatus, jqXHR) {
+                table.DataTable().ajax.reload(null, false);
+            }).always(function( data, textStatus, jqXHR) {
+                $("body").css("cursor", "default");
+            });
+        }
+
+Server-side code:
+
+.. code:: javascript
+
+    urlpatterns = [
+        ...
+        path('set_alarm/<str:table_id>/<uuid:task_id>/<int:new_status>/',
+            views.set_alarm,
+            name="set_alarm"),
+    ]
+
+    @login_required
+    def set_alarm(request, table_id, task_id, new_status):
+
+        # Retrieve model from table id
+        # Example table_id:
+        #   'datatable_walletreceivetransactionstask'
+        #   'datatable_walletcheckstatustask_summary'
+        model_name = table_id.split('_')[1]
+        model = apps.get_model('tasks', model_name)
+
+        # Retrieve task
+        task = get_object_by_uuid_or_404(model, task_id)
+
+        # Set alarm value
+        task.set_alarm(request, new_status)
+
+        return HttpResponse('ok')
+
+.. image:: screenshots/008.png
