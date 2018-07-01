@@ -605,6 +605,8 @@ Application examples
 Customize row details by rendering prettified json fields
 .........................................................
 
+.. image:: screenshots/009.png
+
 .. code:: python
 
     import jsonfield
@@ -681,6 +683,8 @@ where:
 Change row color based on row content
 .....................................
 
+.. image:: screenshots/010.png
+
 .. code:: javascript
 
     var table = element.DataTable({
@@ -720,6 +724,8 @@ where:
 
 Modify table content on the fly (via ajax)
 ..........................................
+
+.. image:: screenshots/008.png
 
 Row details customization:
 
@@ -797,4 +803,3 @@ Server-side code:
 
         return HttpResponse('ok')
 
-.. image:: screenshots/008.png
