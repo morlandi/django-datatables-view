@@ -754,7 +754,7 @@ then change the rendered table as needed
         });
     }
 
-*or use a rowCallack as follows:*
+**or use a rowCallback as follows:**
 
 .. code:: html
 
@@ -767,6 +767,8 @@ then change the rendered table as needed
             $(row).addClass(data.read ? 'read' : 'unread');
         }
     });
+
+This works even if the 'read' column we're interested in is actually not visible.
 
 
 Modify table content on the fly (via ajax)
