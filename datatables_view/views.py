@@ -45,8 +45,8 @@ class DatatablesView(View):
 
     def __init__(self, *args, **kwargs):
 
-        if self.column_defs:
-            self.parse_column_defs(self.column_defs)
+        if self.get_column_defs():
+            self.parse_column_defs(self.get_column_defs())
 
         # If derived class sets 'show_date_filters', respect it;
         # otherwise set according to model 'get_latest_by' attribute
@@ -65,6 +65,18 @@ class DatatablesView(View):
 
         super(DatatablesView, self).__init__(*args, **kwargs)
         self._model_columns = Column.collect_model_columns(self.model, self.columns, self.foreign_fields)
+
+    def get_column_defs(self):
+        return self.column_defs
+
+    def get_initial_order(self):
+        return self.initial_order
+
+    def get_length_menu(self):
+        return self.length_menu
+
+    def get_template_name(self):
+        return self.template_name
 
     def parse_column_defs(self, column_defs):
         """
@@ -102,7 +114,7 @@ class DatatablesView(View):
 
     def list_columns(self):
         columns = []
-        for c in self.column_defs:
+        for c in self.get_column_defs():
 
             column = {
                 #'name': '',
@@ -148,8 +160,8 @@ class DatatablesView(View):
             if action in ['initialize', 'render', ]:
                 return JsonResponse({
                     'columns': self.list_columns(),
-                    'order': self.initial_order,
-                    'length_menu': self.length_menu,
+                    'order': self.get_initial_order(),
+                    'length_menu': self.get_length_menu(),
                     'show_date_filters': self.show_date_filters,
                 })
             elif action == 'details':
@@ -188,7 +200,7 @@ class DatatablesView(View):
 
     def render_table(self, request):
 
-        template_name = self.template_name
+        template_name = self.get_template_name()
 
         # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
         # if request.is_ajax():
@@ -204,8 +216,8 @@ class DatatablesView(View):
                 'title': self.title,
                 'columns': self.list_columns(),
                 'column_details': mark_safe(json.dumps(self.list_columns())),
-                'initial_order': mark_safe(json.dumps(self.initial_order)),
-                'length_menu': mark_safe(json.dumps(self.length_menu)),
+                'initial_order': mark_safe(json.dumps(self.get_initial_order())),
+                'length_menu': mark_safe(json.dumps(self.get_length_menu())),
                 'view': self,
                 'show_date_filter': self.model._meta.get_latest_by is not None,
             },

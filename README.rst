@@ -201,16 +201,31 @@ Class attributes
 
 Required:
 
-    - model
-    - column_defs
+- model
+- column_defs
 
 Optional:
 
-    - template_name = 'datatables_view/datatable.html'
-    - initial_order = [[1, "asc"]]
-    - length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
-    - show_date_filters = None
+- template_name = 'datatables_view/datatable.html'
+- initial_order = [[1, "asc"]]
+- length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
+- show_date_filters = None
 
+or override the following methods to determine attributes value at run-time:
+
+.. code:: python
+
+    def get_column_defs(self):
+        return self.column_defs
+
+    def get_initial_order(self):
+        return self.initial_order
+
+    def get_length_menu(self):
+        return self.length_menu
+
+    def get_template_name(self):
+        return self.template_name
 
 column_defs customizations
 --------------------------
