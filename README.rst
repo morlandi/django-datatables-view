@@ -241,6 +241,7 @@ Example::
         'foreign_field': 'manager__name',
         'placeholder': False,
         'className': 'css-class-currency',
+        'defaultContent': '<h1>test</h1>',
     }, {
         ...
 
