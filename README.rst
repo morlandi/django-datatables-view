@@ -701,7 +701,7 @@ Change row color based on row content
 .. image:: screenshots/010.png
 
 First, we mark the relevant info with a specific CSS class, so we can search
-it later on
+for it later
 
 .. code:: html
 
@@ -753,6 +753,21 @@ then change the rendered table as needed
 
         });
     }
+
+*or use a rowCallack as follows:*
+
+.. code:: html
+
+    var table = element.DataTable({
+
+        ...
+        "rowCallback": function(row, data) {
+            // https://datatables.net/reference/option/rowCallback
+            //console.log("row data: %o", data);
+            $(row).addClass(data.read ? 'read' : 'unread');
+        }
+    });
+
 
 Modify table content on the fly (via ajax)
 ..........................................
