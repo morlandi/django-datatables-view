@@ -700,6 +700,23 @@ Change row color based on row content
 
 .. image:: screenshots/010.png
 
+First, we mark the relevant info with a specific CSS class, so we can search
+it later on
+
+.. code:: html
+
+    column_defs = [
+        ...
+        }, {
+            'name': 'error_counter',
+            'title': 'errors',
+            'className': 'error_counter',
+        }, {
+        ...
+    ]
+
+Have a callback called after each table redraw
+
 .. code:: javascript
 
     var table = element.DataTable({
@@ -710,7 +727,7 @@ Change row color based on row content
         onTableDraw(event);
     });
 
-where:
+then change the rendered table as needed
 
 .. code:: javascript
 
