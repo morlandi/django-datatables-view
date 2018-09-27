@@ -50,22 +50,6 @@ docs/_build
 
 .vagrant
 db.sqlite3
-gunicorn.conf.py
-nuex_scheduler/settings/local.py
-nuex_scheduler/settings/local.sample.py
-nuex_scheduler/settings/smtp_local_settings.py
-nuex_scheduler/settings/test_settings_local.py
-
-
-manuals/sources/user/_build
-manuals/sources/admin/_build
-manuals/sources/mobile/_build
-
-deployment/provisioning.retry
-deployment/deployment.retry
-
-gui/static/bower_components
-
 
 .ipynb*
 .cache

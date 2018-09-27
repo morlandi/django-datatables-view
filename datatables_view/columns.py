@@ -65,7 +65,8 @@ class Column(object):
 
     def render_column_value(self, obj, value):
         if self._allow_choices_lookup:
-            return self._choices_lookup[value]
+            #return self._choices_lookup[value]
+            return self._choices_lookup.get(value, '')
 
         if isinstance(value, datetime.datetime):
             value = format_datetime(value, True)
