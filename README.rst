@@ -568,6 +568,18 @@ Workaround: Adjust the column widths of all visible tables
         datatables_adjust_table_columns();
     }, 1000);
 
+or event better:
+
+.. code:: javascript
+
+    var table = element.DataTable({
+        ...
+        "drawCallback": function(settings) {
+            setTimeout(function () {
+                datatables_adjust_table_columns();
+            }, 100);
+        }
+
 where:
 
 .. code:: javascript
