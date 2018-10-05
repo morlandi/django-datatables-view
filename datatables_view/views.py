@@ -44,10 +44,7 @@ class DatatablesView(View):
     show_date_filters = None
 
     def __init__(self, *args, **kwargs):
-
-        if self.get_column_defs():
-            self.parse_column_defs(self.get_column_defs())
-
+        super(DatatablesView, self).__init__(*args, **kwargs)
         # If derived class sets 'show_date_filters', respect it;
         # otherwise set according to model 'get_latest_by' attribute
         if self.show_date_filters is None:
@@ -62,20 +59,24 @@ class DatatablesView(View):
         searchable_columns = kwargs.pop('searchable_columns', None)
         if searchable_columns is not None:
             self.searchable_columns = searchable_columns
+        #self.initialize()
 
-        super(DatatablesView, self).__init__(*args, **kwargs)
+    def initialize(self, request):
+        column_defs_ex = self.get_column_defs(request)
+        if column_defs_ex:
+            self.parse_column_defs(column_defs_ex)
         self._model_columns = Column.collect_model_columns(self.model, self.columns, self.foreign_fields)
 
-    def get_column_defs(self):
+    def get_column_defs(self, request):
         return self.column_defs
 
-    def get_initial_order(self):
+    def get_initial_order(self, request):
         return self.initial_order
 
-    def get_length_menu(self):
+    def get_length_menu(self, request):
         return self.length_menu
 
-    def get_template_name(self):
+    def get_template_name(self, request):
         return self.template_name
 
     def parse_column_defs(self, column_defs):
@@ -112,9 +113,10 @@ class DatatablesView(View):
             if column_def.get('foreign_field', None):
                 self.foreign_fields[name] = column_def['foreign_field']
 
-    def list_columns(self):
+    def list_columns(self, request):
         columns = []
-        for c in self.get_column_defs():
+        column_defs_ex = self.get_column_defs(request)
+        for c in column_defs_ex:
 
             column = {
                 #'name': '',
@@ -153,15 +155,16 @@ class DatatablesView(View):
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
+        self.initialize(request)
         if request.is_ajax():
             action = request.GET.get('action', '')
 
             # TODO: remove 'render' legacy value
             if action in ['initialize', 'render', ]:
                 return JsonResponse({
-                    'columns': self.list_columns(),
-                    'order': self.get_initial_order(),
-                    'length_menu': self.get_length_menu(),
+                    'columns': self.list_columns(request),
+                    'order': self.get_initial_order(request),
+                    'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
                 })
             elif action == 'details':
@@ -200,7 +203,7 @@ class DatatablesView(View):
 
     def render_table(self, request):
 
-        template_name = self.get_template_name()
+        template_name = self.get_template_name(request)
 
         # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
         # if request.is_ajax():
@@ -214,10 +217,10 @@ class DatatablesView(View):
         html = render_to_string(
             template_name, {
                 'title': self.title,
-                'columns': self.list_columns(),
-                'column_details': mark_safe(json.dumps(self.list_columns())),
-                'initial_order': mark_safe(json.dumps(self.get_initial_order())),
-                'length_menu': mark_safe(json.dumps(self.get_length_menu())),
+                'columns': self.list_columns(request),
+                'column_details': mark_safe(json.dumps(self.list_columns(request))),
+                'initial_order': mark_safe(json.dumps(self.get_initial_order(request))),
+                'length_menu': mark_safe(json.dumps(self.get_length_menu(request))),
                 'view': self,
                 'show_date_filter': self.model._meta.get_latest_by is not None,
             },
