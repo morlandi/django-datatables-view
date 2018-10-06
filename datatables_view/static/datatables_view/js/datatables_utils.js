@@ -1,6 +1,6 @@
 
 
-function datatables_bind_row_tools(table, url)
+function datatables_bind_row_tools(table, url, custom_id='id')
 {
     table.on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
         event.preventDefault();
@@ -17,7 +17,7 @@ function datatables_bind_row_tools(table, url)
     });
 }
 
-function datatables_load_row_details(rowData, url) {
+function datatables_load_row_details(rowData, url, custom_id) {
     var div = $('<div/>')
         .addClass('loading')
         .text('Loading...');
@@ -26,7 +26,7 @@ function datatables_load_row_details(rowData, url) {
         url: url,
         data: {
             action: 'details',
-            id: rowData.id
+            id: rowData[custom_id]
         },
         dataType: 'json',
         success: function(json) {
