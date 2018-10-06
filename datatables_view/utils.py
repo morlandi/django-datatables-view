@@ -2,7 +2,8 @@ import pprint
 from django.utils import timezone
 from django.conf import settings
 from django.utils import formats
-
+import pytz
+local_tz = pytz.timezone(getattr(settings, 'TIME_ZONE', 'Europe/Paris'))
 
 try:
     import sqlparse
@@ -37,7 +38,10 @@ def format_datetime(dt, include_time=True):
     if dt is None:
         return ''
 
-    dt = timezone.localtime(dt)
+    try:
+        dt = timezone.localtime(dt)
+    except:
+        dt = local_tz.localize(dt)
 
     use_l10n = getattr(settings, 'USE_L10N', False)
     text = formats.date_format(dt, use_l10n=use_l10n, format='SHORT_DATE_FORMAT')
