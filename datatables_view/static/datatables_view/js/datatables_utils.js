@@ -11,7 +11,7 @@ function datatables_bind_row_tools(table, url, custom_id='id')
             tr.removeClass('shown');
         }
         else {
-            row.child(datatables_load_row_details(row.data(), url), 'details').show('slow');
+            row.child(datatables_load_row_details(row.data(), url, custom_id), 'details').show('slow');
             tr.addClass('shown');
         }
     });
