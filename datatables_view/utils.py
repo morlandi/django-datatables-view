@@ -3,7 +3,6 @@ from django.utils import timezone
 from django.conf import settings
 from django.utils import formats
 import pytz
-local_tz = pytz.timezone(getattr(settings, 'TIME_ZONE', 'Europe/Paris'))
 
 try:
     import sqlparse
@@ -41,6 +40,7 @@ def format_datetime(dt, include_time=True):
     try:
         dt = timezone.localtime(dt)
     except:
+        local_tz = pytz.timezone(getattr(settings, 'TIME_ZONE', 'UTC'))
         dt = local_tz.localize(dt)
 
     use_l10n = getattr(settings, 'USE_L10N', False)
