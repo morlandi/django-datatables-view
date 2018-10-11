@@ -372,7 +372,7 @@ in the following order:
 
 and, when found, used it for rendering.
 
-The template receices the following context::
+The template receives the following context::
 
     html = template.render({
         'model': self.model,
