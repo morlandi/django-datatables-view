@@ -556,6 +556,182 @@ and link a specific html element to the "footerCallback" signal:
 .. image:: screenshots/005.png
 
 
+Generic tables
+--------------
+
+Chances are you might want to supply a standard user interface for listing
+several models.
+
+In this case, it is possible to use a generic approach and avoid code duplications,
+as detailed below.
+
+First, we supply a generic view which receives a model as parameter,
+and passes it to the template used for rendering the page:
+
+file `frontend/datatables_views.py`:
+
+.. code:: python
+
+    @login_required
+    def object_list_view(request, model, template_name="frontend/pages/object_list.html"):
+        return render(request, template_name, {
+            'model': model,
+        })
+
+In the urlconf, link to specific models as in the example below:
+
+file `frontend/urls.py`:
+
+.. code:: python
+
+    path('canali/', datatables_views.object_list_view, {'model': cbrdb.models.Canale, }, name="canali-list"),
+
+The template uses the `model` received in the context to display appropriate `verbose_name`
+and `verbose_name_plural` attributes, and to extract `app_label` and `model_name`
+as needed; unfortunately, we also had to supply some very basic helper templatetags,
+as the `_meta` attribute of the model is not directly visible in this context.
+
+.. code:: html
+
+    {% extends 'frontend/base.html' %}
+    {% load static datatables_view_tags i18n %}
+
+    {% block breadcrumbs %}
+        <li>
+            <a href="{% url 'frontend:index' %}">{% trans 'Home' %}</a>
+        </li>
+        <li class="active">
+            <strong>{{model|model_verbose_name_plural}}</strong>
+        </li>
+    {% endblock breadcrumbs %}
+
+    {% block content %}
+
+        {% testhasperm model 'view' as can_view_objects %}
+        {% if not can_view_objects %}
+            <h2>{% trans "Sorry, you don't have the permission to view these objects" %}</h2>
+        {% else %}
+
+            <div>
+                <h5>{% trans 'All' %} {{ model|model_verbose_name_plural }}</h5>
+                {% ifhasperm model 'add' %}
+                    <a href="#">{% trans 'Add ...' %}</a>
+                {% endifhasperm %}
+            </div>
+            <div class="table-responsive">
+                <table id="datatable" width="100%" class="table table-striped table-bordered table-hover dataTables-example">
+                </table>
+            </div>
+
+            {% ifhasperm model 'add' %}
+                <a href="#">{% trans 'Add ...' %}</a>
+            {% endifhasperm %}
+
+        {% endif %}
+
+    {% endblock content %}
+
+
+    {% block extrajs %}
+        <script language="javascript">
+
+            $( document ).ready(function() {
+                initialize_datatable($('#datatable'), "{% url 'frontend:object-datatable' model|app_label model|model_name %}");
+            });
+
+            function initialize_datatable(element, url) {
+
+                $.ajax({
+                    type: 'GET',
+                    url: url + '?action=initialize',
+                    dataType: 'json'
+                }).done(function(data, textStatus, jqXHR) {
+                    var table = element.DataTable({
+                        "processing": true,
+                        "serverSide": true,
+                        "scrollX": true,
+                        "ajax": {
+                            "url": url,
+                            "type": "GET",
+                            "data": function (d) {
+                                console.log(d);
+                            }
+                        },
+                        "columns": data.columns,
+                        "order": data.order,
+                        "drawCallback": function(settings) {
+                            setTimeout(function () {
+                                datatables_adjust_table_columns();
+                            }, 100);
+                        }
+                    });
+                    datatables_bind_row_tools(table, url);
+                });
+
+            }
+
+        </script>
+    {% endblock %}
+
+The connection with the Django backend uses the following url::
+
+    {% url 'frontend:object-datatable' model|app_label model|model_name %}
+
+from `urls.py`::
+
+    # List any Model
+    path('datatable/<str:app_label>/<str:model_name>/', datatables_views.object_datatable_view, name="object-datatable"),
+
+object_datatable_view() is a lookup helper which navigates all DatatablesView-derived
+classes in the module and selects the view appropriate for the specific model
+in use:
+
+file `frontend/datatables_views.py`:
+
+.. code:: python
+
+    import inspect
+
+    def object_datatable_view(request, app_label, model_name):
+
+        # List all DatatablesView in this module
+        datatable_views = [
+            klass
+            for name, klass in inspect.getmembers(sys.modules[__name__])
+            if inspect.isclass(klass) and issubclass(klass, DatatablesView)
+        ]
+
+        # Scan DatatablesView until we find the right one
+        for datatable_view in datatable_views:
+            model = datatable_view.model
+            if (model is not None and (model._meta.app_label, model._meta.model_name) == (app_label, model_name)):
+                view = datatable_view
+                break
+
+        return view.as_view()(request)
+
+which for this example happens to be:
+
+.. code:: python
+
+    @method_decorator(login_required, name='dispatch')
+    class CanaleDatatablesView(BaseDatatablesView):
+
+        model = Canale
+        title = 'Canali'
+
+        column_defs = [
+            DatatablesView.render_row_tools_column_def(),
+            {
+                'name': 'id',
+                'visible': False,
+            }, {
+                'name': 'nome',
+            }, {
+                'name': 'codice',
+            }
+        ]
+
 Snippets
 --------
 
