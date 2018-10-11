@@ -16,6 +16,8 @@ from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
+from django.template import TemplateDoesNotExist
+from django.template import loader, Context
 
 
 from .columns import Column
@@ -177,17 +179,46 @@ class DatatablesView(View):
             response = HttpResponse(self.render_table(request))
         return response
 
+    # def render_row_details(self, id, request=None):
+    #     obj = self.model.objects.get(id=id)
+    #     fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
+    #     html = '<table class="row-details">'
+    #     for field in fields:
+    #         try:
+    #             value = getattr(obj, field)
+    #             html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
+    #         except:
+    #             pass
+    #     html += '</table>'
+    #     return html
+
     def render_row_details(self, id, request=None):
+
         obj = self.model.objects.get(id=id)
-        fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
-        html = '<table class="row-details">'
-        for field in fields:
-            try:
-                value = getattr(obj, field)
-                html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
-            except:
-                pass
-        html += '</table>'
+
+        # Search a custom template for rendering, if available
+        try:
+            template = loader.select_template([
+                'datatables_view/%s/%s/render_row_details.html' % (self.model._meta.app_label, self.model._meta.model_name),
+                'datatables_view/%s/render_row_details.html' % (self.model._meta.app_label, ),
+                'datatables_view/render_row_details.html',
+            ])
+            html = template.render({
+                'model': self.model,
+                'object': obj,
+            }, request)
+
+        # Failing that, display a simple table with field values
+        except TemplateDoesNotExist:
+            fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
+            html = '<table class="row-details">'
+            for field in fields:
+                try:
+                    value = getattr(obj, field)
+                    html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
+                except:
+                    pass
+            html += '</table>'
         return html
 
     @staticmethod

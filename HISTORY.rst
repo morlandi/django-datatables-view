@@ -3,6 +3,19 @@
 History
 =======
 
+v1.2.2
+------
+* generic tables explained
+* render_row_details customizable via templates
+
+v1.2.1
+------
+* merged PR #1 from Thierry BOULOGNE
+
+v1.2.0
+------
+* Incompatible change: postpone column initialization and pass the request to get_column_defs() for runtime table layout customization
+
 v1.0.1
 ------
 * fix choices lookup

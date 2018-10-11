@@ -360,6 +360,28 @@ after each table refresh, as shown below:
 
     </script>
 
+row details customization
+.........................
+
+The default implementation of render_row_details() tries to load a template
+in the following order:
+
+- datatables_view/<app_label>/<model_name>/render_row_details.html
+- datatables_view/<app_label>/render_row_details.html
+- datatables_view/render_row_details.html
+
+and, when found, used it for rendering.
+
+The template receices the following context::
+
+    html = template.render({
+        'model': self.model,
+        'object': obj,
+    }, request)
+
+If no template is available, a simple HTML table with all field values
+is built instead.
+
 
 Overridable DatatablesView methods
 ----------------------------------
@@ -584,7 +606,7 @@ file `frontend/urls.py`:
 
 .. code:: python
 
-    path('canali/', datatables_views.object_list_view, {'model': cbrdb.models.Canale, }, name="canali-list"),
+    path('channel/', datatables_views.object_list_view, {'model': backend.models.Channel, }, name="channel-list"),
 
 The template uses the `model` received in the context to display appropriate `verbose_name`
 and `verbose_name_plural` attributes, and to extract `app_label` and `model_name`
@@ -673,7 +695,10 @@ as the `_meta` attribute of the model is not directly visible in this context.
         </script>
     {% endblock %}
 
-The connection with the Django backend uses the following url::
+
+app_label and model_name are just strings, and as such can be specified in an url.
+
+The connection with the Django backend uses the following generic url::
 
     {% url 'frontend:object-datatable' model|app_label model|model_name %}
 
@@ -715,10 +740,10 @@ which for this example happens to be:
 .. code:: python
 
     @method_decorator(login_required, name='dispatch')
-    class CanaleDatatablesView(BaseDatatablesView):
+    class ChannelDatatablesView(BaseDatatablesView):
 
-        model = Canale
-        title = 'Canali'
+        model = Channel
+        title = 'Channels'
 
         column_defs = [
             DatatablesView.render_row_tools_column_def(),
@@ -726,9 +751,9 @@ which for this example happens to be:
                 'name': 'id',
                 'visible': False,
             }, {
-                'name': 'nome',
+                'name': 'description',
             }, {
-                'name': 'codice',
+                'name': 'code',
             }
         ]
 
