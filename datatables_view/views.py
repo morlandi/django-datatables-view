@@ -192,6 +192,12 @@ class DatatablesView(View):
     #     html += '</table>'
     #     return html
 
+    def get_model_admin(self):
+        from django.contrib import admin
+        if self.model in admin.site._registry:
+            return admin.site._registry[self.model]
+        return None
+
     def render_row_details(self, id, request=None):
 
         obj = self.model.objects.get(id=id)
@@ -205,6 +211,7 @@ class DatatablesView(View):
             ])
             html = template.render({
                 'model': self.model,
+                'model_admin': self.get_model_admin(),
                 'object': obj,
             }, request)
 

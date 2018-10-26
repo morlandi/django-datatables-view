@@ -3,6 +3,10 @@
 History
 =======
 
+v1.2.3
+------
+* render_row_details() passes model_admin to the context, to permit fieldsets navigation
+
 v1.2.2
 ------
 * generic tables explained

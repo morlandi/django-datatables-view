@@ -376,8 +376,12 @@ The template receives the following context::
 
     html = template.render({
         'model': self.model,
+        'model_admin': self.get_model_admin(),
         'object': obj,
     }, request)
+
+`model_admin`, when available, can be used to navigate fieldsets (if defined)
+in the template, much like django's `admin/change_form.html` does.
 
 If no template is available, a simple HTML table with all field values
 is built instead.
