@@ -600,6 +600,10 @@ file `frontend/datatables_views.py`:
 
     @login_required
     def object_list_view(request, model, template_name="frontend/pages/object_list.html"):
+        """
+        Render the page which contains the table.
+        That will in turn invoke (via Ajax) object_datatable_view(), to fill the table content
+        """
         return render(request, template_name, {
             'model': model,
         })
