@@ -70,6 +70,8 @@ class Column(object):
 
         if isinstance(value, datetime.datetime):
             value = format_datetime(value, True)
+        elif isinstance(value, datetime.date):
+            value = format_datetime(value, False)
 
         return value
 
