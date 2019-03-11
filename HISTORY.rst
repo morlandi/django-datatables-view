@@ -3,6 +3,10 @@
 History
 =======
 
+v1.2.4
+------
+* recognize datatime.date column type
+
 v1.2.3
 ------
 * render_row_details() passes model_admin to the context, to permit fieldsets navigation
