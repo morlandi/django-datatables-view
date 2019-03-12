@@ -33,6 +33,9 @@ from .app_settings import ENABLE_QUERYSET_TRACING
 from .app_settings import ENABLE_QUERYDICT_TRACING
 
 
+print('\x1b[41;1m' + " UNSTABLE RELEASE: datatables_view refactoring in progress " + '\x1b[0m')
+
+
 class DatatablesView(View):
 
     columns = []
@@ -162,7 +165,8 @@ class DatatablesView(View):
             action = request.GET.get('action', '')
 
             # TODO: remove 'render' legacy value
-            if action in ['initialize', 'render', ]:
+            #if action in ['initialize', 'render', ]:
+            if action == 'initialize':
                 return JsonResponse({
                     'columns': self.list_columns(request),
                     'order': self.get_initial_order(request),
@@ -176,7 +180,8 @@ class DatatablesView(View):
 
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
         else:
-            response = HttpResponse(self.render_table(request))
+            assert False
+            #response = HttpResponse(self.render_table(request))
         return response
 
     # def render_row_details(self, id, request=None):
@@ -239,33 +244,33 @@ class DatatablesView(View):
         }
         return column_def
 
-    def render_table(self, request):
+    # def render_table(self, request):
 
-        template_name = self.get_template_name(request)
+    #     template_name = self.get_template_name(request)
 
-        # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
-        # if request.is_ajax():
-        #     template_name = getattr(self, 'ajax_template_name', '')
-        #     if not template_name:
-        #         split = self.template_name.split('.html')
-        #         split[-1] = '_inner'
-        #         split.append('.html')
-        #         template_name = ''.join(split)
+    #     # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
+    #     # if request.is_ajax():
+    #     #     template_name = getattr(self, 'ajax_template_name', '')
+    #     #     if not template_name:
+    #     #         split = self.template_name.split('.html')
+    #     #         split[-1] = '_inner'
+    #     #         split.append('.html')
+    #     #         template_name = ''.join(split)
 
-        html = render_to_string(
-            template_name, {
-                'title': self.title,
-                'columns': self.list_columns(request),
-                'column_details': mark_safe(json.dumps(self.list_columns(request))),
-                'initial_order': mark_safe(json.dumps(self.get_initial_order(request))),
-                'length_menu': mark_safe(json.dumps(self.get_length_menu(request))),
-                'view': self,
-                'show_date_filter': self.model._meta.get_latest_by is not None,
-            },
-            request=request
-        )
+    #     html = render_to_string(
+    #         template_name, {
+    #             'title': self.title,
+    #             'columns': self.list_columns(request),
+    #             'column_details': mark_safe(json.dumps(self.list_columns(request))),
+    #             'initial_order': mark_safe(json.dumps(self.get_initial_order(request))),
+    #             'length_menu': mark_safe(json.dumps(self.get_length_menu(request))),
+    #             'view': self,
+    #             'show_date_filter': self.model._meta.get_latest_by is not None,
+    #         },
+    #         request=request
+    #     )
 
-        return html
+    #     return html
 
     def get(self, request, *args, **kwargs):
 
@@ -444,7 +449,6 @@ class DatatablesView(View):
         matching_choices = [val for key, val in six.iteritems(values_dict)
                             if key.startswith(search_value)]
         return Q(**{column + '__in': matching_choices})
-
 
     def filter_queryset_all_columns(self, search_value, qs):
         search_filters = Q()
