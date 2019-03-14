@@ -9,6 +9,7 @@ class Column(object):
     def __init__(self, model_field, allow_choices_lookup=True):
         try:
             self.name = model_field.name
+            self.model_field = model_field
             choices = model_field.choices
 
             if allow_choices_lookup and choices:
@@ -20,6 +21,7 @@ class Column(object):
                 self._allow_choices_lookup = False
         except:
             self.name = model_field
+            self.model_field = None
             self._allow_choices_lookup = False
 
     @staticmethod
@@ -29,7 +31,7 @@ class Column(object):
         """
 
         columns = [c['name'] for c in column_specs]
-        foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c.get('foreign_field', None)])
+        foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c['foreign_field']])
 
         fields = {f.name: f for f in model._meta.get_fields()}
         model_columns = {}
@@ -99,9 +101,7 @@ class ForeignColumn(Column):
         self._field_search_path = path_to_column
         self._field_path = path_to_column.split('__')
         foreign_field = self.get_foreign_field(model)
-
-        super(ForeignColumn, self).__init__(
-            foreign_field, allow_choices_lookup)
+        super(ForeignColumn, self).__init__(foreign_field, allow_choices_lookup)
 
     def get_field_search_path(self):
         return self._field_search_path

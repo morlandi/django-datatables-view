@@ -28,9 +28,12 @@ from .columns import Order
 from .exceptions import ColumnOrderError
 from .utils import prettyprint_queryset
 from .utils import trace
+from .filters import build_column_filter
 from .app_settings import MAX_COLUMNS
 from .app_settings import ENABLE_QUERYSET_TRACING
 from .app_settings import ENABLE_QUERYDICT_TRACING
+from .app_settings import ENABLE_FILTER_TRACING
+from .app_settings import TEST_FILTERS
 
 
 from . import __version__
@@ -49,6 +52,9 @@ class DatatablesView(View):
 
     # Set with self.initialize()
     column_specs = []
+    #column_specs_lut = {}
+    column_objs_lut = {}
+
     model_columns = {}
     show_date_filters = None
 
@@ -66,6 +72,9 @@ class DatatablesView(View):
                 'searchable': False,
                 'orderable': False,
                 'visible': True,
+                'foreign_field': None,
+                'defaultContent': None,
+                'className': None,
             }
 
             column.update(c)
@@ -92,8 +101,11 @@ class DatatablesView(View):
         if ENABLE_QUERYDICT_TRACING:
             trace(self.column_specs, prompt='column_specs')
 
-        # Initialize model columns
-        self.model_columns = Column.collect_model_columns(
+        # # build LUT for column_specs
+        # self.column_specs_lut = {c['name']: c for c in self.column_specs}
+
+        # build LUT for column objects
+        self.column_objs_lut = Column.collect_model_columns(
             self.model,
             self.column_specs
         )
@@ -137,6 +149,20 @@ class DatatablesView(View):
         None = check 'get_latest_by' in model's Meta.
         """
         return self.show_date_filters
+
+    def column_obj(self, name):
+        """
+        Lookup columnObj for the column_spec identified by 'name'
+        """
+        assert name in self.column_objs_lut
+        return self.column_objs_lut[name]
+
+    # def column_spec(self, name):
+    #     """
+    #     Lookup the column_spec identified by 'name'
+    #     """
+    #     assert name in self.column_specs_lut
+    #     return self.column_specs_lut[name]
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -295,10 +321,8 @@ class DatatablesView(View):
         has_finished = False
         column_links = []
 
-        while column_index < MAX_COLUMNS and\
-                not has_finished:
+        while column_index < MAX_COLUMNS and not has_finished:
             column_base = 'columns[%d]' % column_index
-
             try:
                 column_name = query_dict[column_base + '[name]']
                 if column_name == '':
@@ -308,7 +332,8 @@ class DatatablesView(View):
                     column_links.append(
                         ColumnLink(
                             column_name,
-                            self.model_columns[column_name],
+                            #self.model_columns[column_name],
+                            self.column_obj(column_name),
                             query_dict.get(column_base + '[orderable]'),
                             query_dict.get(column_base + '[searchable]'),
                             query_dict.get(column_base + '[search][value]'),
@@ -352,7 +377,8 @@ class DatatablesView(View):
         return self.model.objects.all()
 
     def render_column(self, row, column):
-        return self.model_columns[column].render_column(row)
+        #return self.model_columns[column].render_column(row)
+        return self.column_obj(column).render_column(row)
 
     def prepare_results(self, qs):
         json_data = []
@@ -428,39 +454,32 @@ class DatatablesView(View):
                             if key.startswith(search_value)]
         return Q(**{column + '__in': matching_choices})
 
-    def filter_queryset_all_columns(self, search_value, qs):
+    def _filter_queryset(self, column_names, search_value, qs):
+
         search_filters = Q()
-        searchable_columns = [c['name'] for c in self.column_specs if c.get('searchable', True if c['name'] and c['visible'] else False)]
-        for col in searchable_columns:
-            model_column = self.model_columns[col]
+        for column_name in column_names:
 
-            if model_column.has_choices_available:
-                search_filters |=\
-                    Q(**{col + '__in': model_column.search_in_choices(
-                        search_value)})
-            else:
-                query_param_name = model_column.get_field_search_path()
+            column_obj = self.column_obj(column_name)
 
-                search_filters |=\
-                    Q(**{query_param_name+'__icontains': search_value})
-                    #Q(**{query_param_name+'__istartswith': search_value})
+            column_filter = build_column_filter(column_name, column_obj, search_value)
+            if column_filter:
+                search_filters |= column_filter
+                if TEST_FILTERS:
+                    trace(column_name, "Test filter")
+                    qstest = qs.filter(column_filter)
+                    trace('%d/%d records filtered' % (qstest.count(), qs.count()))
+
+        if ENABLE_FILTER_TRACING:
+            trace(search_filters, prompt='Filtering "%s" over fields: %s' % (search_value, ', '.join(column_names)))
 
         return qs.filter(search_filters)
+
+    def filter_queryset_all_columns(self, search_value, qs):
+        searchable_columns = [c['name'] for c in self.column_specs if c['searchable']]
+        return self._filter_queryset(searchable_columns, search_value, qs)
 
     def filter_queryset_by_column(self, column_name, search_value, qs):
-        search_filters = Q()
-        model_column = self.model_columns[column_name]
-
-        if model_column.has_choices_available:
-            search_filters |=\
-                Q(**{column_name + '__in': model_column.search_in_choices(search_value)})
-        else:
-            query_param_name = model_column.get_field_search_path()
-            search_filters |=\
-                Q(**{query_param_name+'__icontains': search_value})
-                #Q(**{query_param_name+'__istartswith': search_value})
-
-        return qs.filter(search_filters)
+        return self._filter_queryset([column_name, ], search_value, qs)
 
     def footer_callback_message(self, qs, params):
         #return 'Selected rows: %d' % qs.count()
