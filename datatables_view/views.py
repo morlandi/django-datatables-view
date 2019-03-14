@@ -33,7 +33,8 @@ from .app_settings import ENABLE_QUERYSET_TRACING
 from .app_settings import ENABLE_QUERYDICT_TRACING
 
 
-print('\x1b[41;1m' + " UNSTABLE RELEASE: datatables_view refactoring in progress " + '\x1b[0m')
+from . import __version__
+print('\x1b[41;1m UNSTABLE RELEASE %s: datatables_view refactoring in progress \x1b[0m' % __version__)
 
 
 class DatatablesView(View):
