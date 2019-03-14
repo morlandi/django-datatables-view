@@ -23,10 +23,14 @@ class Column(object):
             self._allow_choices_lookup = False
 
     @staticmethod
-    def collect_model_columns(model, columns, foreign_fields):
+    def collect_model_columns(model, column_specs):
         """
         Build a list of either Columns or ForeignColumns as required
         """
+
+        columns = [c['name'] for c in column_specs]
+        foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c.get('foreign_field', None)])
+
         fields = {f.name: f for f in model._meta.get_fields()}
         model_columns = {}
         for col_name in columns:
