@@ -38,89 +38,44 @@ print('\x1b[41;1m' + " UNSTABLE RELEASE: datatables_view refactoring in progress
 
 class DatatablesView(View):
 
+    # Either override in derived class, or override self.get_column_defs()
+    column_defs = []
+
     columns = []
     searchable_columns = []
     foreign_fields = {}
+    column_specs = []
+
     model = None
     template_name = 'datatables_view/datatable.html'
     initial_order = [[1, "asc"]]
     length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
-    column_defs = None
     show_date_filters = None
 
-    def __init__(self, *args, **kwargs):
-        super(DatatablesView, self).__init__(*args, **kwargs)
-        # If derived class sets 'show_date_filters', respect it;
-        # otherwise set according to model 'get_latest_by' attribute
-        if self.show_date_filters is None:
-            self.show_date_filters = getattr(self.model._meta, 'get_latest_by', None) != None
+    # def __init__(self, *args, **kwargs):
+    #     super(DatatablesView, self).__init__(*args, **kwargs)
 
-        columns = kwargs.pop('columns', None)
-        if columns is not None:
-            self.columns = columns
-        foreign_fields = kwargs.pop('foreign_fields', None)
-        if foreign_fields is not None:
-            self.foreign_fields = foreign_fields
-        searchable_columns = kwargs.pop('searchable_columns', None)
-        if searchable_columns is not None:
-            self.searchable_columns = searchable_columns
-        #self.initialize()
+    #     # # If derived class sets 'show_date_filters', respect it;
+    #     # # otherwise set according to model 'get_latest_by' attribute
+    #     # if self.show_date_filters is None:
+    #     #     self.show_date_filters = getattr(self.model._meta, 'get_latest_by', None) != None
+
+    #     # columns = kwargs.pop('columns', None)
+    #     # if columns is not None:
+    #     #     self.columns = columns
+    #     # foreign_fields = kwargs.pop('foreign_fields', None)
+    #     # if foreign_fields is not None:
+    #     #     self.foreign_fields = foreign_fields
+    #     # searchable_columns = kwargs.pop('searchable_columns', None)
+    #     # if searchable_columns is not None:
+    #     #     self.searchable_columns = searchable_columns
+    #     # #self.initialize()
 
     def initialize(self, request):
+
+        # Grab column defs and initialize self.column_specs
         column_defs_ex = self.get_column_defs(request)
-        if column_defs_ex:
-            self.parse_column_defs(column_defs_ex)
-        self._model_columns = Column.collect_model_columns(self.model, self.columns, self.foreign_fields)
-
-    def get_column_defs(self, request):
-        return self.column_defs
-
-    def get_initial_order(self, request):
-        return self.initial_order
-
-    def get_length_menu(self, request):
-        return self.length_menu
-
-    def get_template_name(self, request):
-        return self.template_name
-
-    def parse_column_defs(self, column_defs):
-        """
-        Use column_defs to initialize internal variables
-
-        Example:
-
-            column_defs = [{
-                'name': 'currency',
-                'title': 'Currency',
-                'searchable': True,
-                'orderable': True,
-                'visible': True,
-                'foreign_field': None,  # example: 'manager__name',
-                'placeholder': False,
-                'className': 'css-class-currency',
-            }, {
-                'name': 'active',
-                ...
-
-        """
-
-        self.columns = []
-        self.searchable_columns = []
-        self.foreign_fields = {}
-
-        for column_def in column_defs:
-            name = column_def['name']
-            self.columns.append(name)
-            visible = column_def.get('visible', True)
-            if column_def.get('searchable', True if name and visible else False):
-                self.searchable_columns.append(name)
-            if column_def.get('foreign_field', None):
-                self.foreign_fields[name] = column_def['foreign_field']
-
-    def list_columns(self, request):
-        columns = []
-        column_defs_ex = self.get_column_defs(request)
+        self.column_specs = []
         for c in column_defs_ex:
 
             column = {
@@ -151,24 +106,138 @@ class DatatablesView(View):
                 column['searchable'] = c.get('searchable', column['visible'])
                 column['orderable'] = c.get('orderable', column['visible'])
 
-            columns.append(column)
+            self.column_specs.append(column)
 
         if ENABLE_QUERYDICT_TRACING:
-            trace(columns, prompt='list_columns()')
+            trace(self.column_specs, prompt='column_specs')
 
-        return columns
+        # Adjust legary attributes
+        self.columns = []
+        self.searchable_columns = []
+        self.foreign_fields = {}
+
+        for column_def in column_defs_ex:
+            name = column_def['name']
+            self.columns.append(name)
+            visible = column_def.get('visible', True)
+            if column_def.get('searchable', True if name and visible else False):
+                self.searchable_columns.append(name)
+            if column_def.get('foreign_field', None):
+                self.foreign_fields[name] = column_def['foreign_field']
+
+        self._model_columns = Column.collect_model_columns(self.model, self.columns, self.foreign_fields)
+
+        # Initialize "show_date_filters"
+        date_filters = self.get_show_date_filters(request)
+        # If derived class sets 'show_date_filters', respect it;
+        # otherwise set according to model 'get_latest_by' attribute
+        if date_filters is None:
+            date_filters = getattr(self.model._meta, 'get_latest_by', None) != None
+        self.show_date_filters = date_filters
+
+    def get_column_defs(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.column_defs
+
+    def get_initial_order(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.initial_order
+
+    def get_length_menu(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.length_menu
+
+    def get_template_name(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.template_name
+
+    def get_show_date_filters(self, request):
+        """
+        Override to customize based of request.
+        Return either True, False or None.
+        None = check 'get_latest_by' in model's Meta.
+        """
+        return self.show_date_filters
+
+    # def parse_column_defs(self, column_defs):
+    #     """
+    #     Use column_defs to initialize internal variables
+
+    #     Example:
+
+    #         column_defs = [{
+    #             'name': 'currency',
+    #             'title': 'Currency',
+    #             'searchable': True,
+    #             'orderable': True,
+    #             'visible': True,
+    #             'foreign_field': None,  # example: 'manager__name',
+    #             'placeholder': False,
+    #             'className': 'css-class-currency',
+    #         }, {
+    #             'name': 'active',
+    #             ...
+
+    #     """
+
+    # def list_columns(self, request):
+    #     #columns = []
+    #     #column_defs_ex = self.get_column_defs(request)
+
+    #     columns = self.column_specs
+    #     # for c in column_defs_ex:
+
+    #     #     column = {
+    #     #         #'name': '',
+    #     #         'data': None,
+    #     #         'title': '',
+    #     #         'searchable': False,
+    #     #         'orderable': False,
+    #     #         'visible': True,
+    #     #     }
+
+    #     #     column.update(c)
+
+    #     #     if c['name']:
+
+    #     #         if 'title' in c:
+    #     #             title = c['title']
+    #     #         else:
+    #     #             try:
+    #     #                 title = self.model._meta.get_field(c['name']).verbose_name.title()
+    #     #             except:
+    #     #                 title = c['name']
+
+    #     #         column['name'] = c['name']
+    #     #         column['data'] = c['name']
+    #     #         #column['title'] = c.get('title') if 'title' in c else self.model._meta.get_field(c['name']).verbose_name.title()
+    #     #         column['title'] = title
+    #     #         column['searchable'] = c.get('searchable', column['visible'])
+    #     #         column['orderable'] = c.get('orderable', column['visible'])
+
+    #     #     columns.append(column)
+
+    #     if ENABLE_QUERYDICT_TRACING:
+    #         trace(columns, prompt='list_columns()')
+
+    #     return columns
 
     @method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
         self.initialize(request)
         if request.is_ajax():
             action = request.GET.get('action', '')
-
-            # TODO: remove 'render' legacy value
-            #if action in ['initialize', 'render', ]:
             if action == 'initialize':
                 return JsonResponse({
-                    'columns': self.list_columns(request),
+                    'columns': self.column_specs,
                     'order': self.get_initial_order(request),
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
