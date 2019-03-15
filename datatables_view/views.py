@@ -32,7 +32,6 @@ from .filters import build_column_filter
 from .app_settings import MAX_COLUMNS
 from .app_settings import ENABLE_QUERYSET_TRACING
 from .app_settings import ENABLE_QUERYDICT_TRACING
-from .app_settings import ENABLE_FILTER_TRACING
 from .app_settings import TEST_FILTERS
 
 
@@ -456,11 +455,12 @@ class DatatablesView(View):
 
     def _filter_queryset(self, column_names, search_value, qs):
 
+        if TEST_FILTERS:
+            trace(', '.join(column_names), 'Filtering "%s" over fields' % search_value)
+
         search_filters = Q()
         for column_name in column_names:
-
             column_obj = self.column_obj(column_name)
-
             column_filter = build_column_filter(column_name, column_obj, search_value)
             if column_filter:
                 search_filters |= column_filter
@@ -469,8 +469,8 @@ class DatatablesView(View):
                     qstest = qs.filter(column_filter)
                     trace('%d/%d records filtered' % (qstest.count(), qs.count()))
 
-        if ENABLE_FILTER_TRACING:
-            trace(search_filters, prompt='Filtering "%s" over fields: %s' % (search_value, ', '.join(column_names)))
+        if TEST_FILTERS:
+            trace(search_filters, prompt='Search filters')
 
         return qs.filter(search_filters)
 

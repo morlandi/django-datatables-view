@@ -490,6 +490,11 @@ DATATABLES_VIEW_ENABLE_QUERYSET_TRACING
 
     Default: False
 
+DATATABLES_VIEW_TEST_FILTERS
+
+    When True, trace results for each individual filter, for debugging purposes
+
+    Default: False
 
 Filter data by date range
 -------------------------

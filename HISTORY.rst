@@ -3,6 +3,14 @@
 History
 =======
 
+v2.0.4
+------
+* Filter tracing (for debugging)
+
+v2.0.0
+------
+* DatatablesView refactoring: columns_specs[] used as a substitute for columns[],searchable_columns[] and foreign_fields[]
+
 v1.2.4
 ------
 * recognize datatime.date column type
