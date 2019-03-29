@@ -17,7 +17,16 @@ class TestDatatablesQs(unittest.TestCase):
 
     def test_order(self):
 
-        model_columns = Column.collect_model_columns(MyTestModel, ['one', 'two'], [])
+        column_specs = [{
+            'name': 'one',
+            'foreign_field': '',
+        }, {
+            'name': 'two',
+            'foreign_field': '',
+        }]
+
+        #model_columns = Column.collect_model_columns(MyTestModel, ['one', 'two'])
+        model_columns = Column.collect_model_columns(MyTestModel, column_specs)
         column_links = [
             ColumnLink('one', model_columns['one']),
             ColumnLink('two', model_columns['two'], placeholder=True),
