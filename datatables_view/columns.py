@@ -137,8 +137,14 @@ class ForeignColumn(Column):
         current_value = obj
 
         for current_path_item in self._field_path:
-            current_value = getattr(current_value, current_path_item)
-
+            try:
+                current_value = getattr(current_value, current_path_item)
+            except:
+                current_value = [
+                    getattr(current_value, current_path_item) 
+                    for current_value in current_value.get_queryset()
+                ]
+            
             if current_value is None:
                 return None
 
