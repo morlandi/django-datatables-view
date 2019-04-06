@@ -1,5 +1,5 @@
 import pprint
-from datetime import time
+from datetime import time, datetime
 
 import pytz
 from django.conf import settings
@@ -45,8 +45,8 @@ def format_datetime(dt, include_time=True):
         try:
             dt = local_tz.localize(dt)
         except Exception as e:
-            time = time(0, 0, 0, tzinfo=timezone.get_current_timezone())
-            dt = local_tz.localize(datetime.combine(dt,time))
+            custom_time = time(0, 0, 0, tzinfo=timezone.get_current_timezone())
+            dt = datetime.combine(dt, custom_time)
 
 
     use_l10n = getattr(settings, 'USE_L10N', False)
