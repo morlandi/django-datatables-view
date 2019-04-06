@@ -1,8 +1,9 @@
 import pprint
-from django.utils import timezone
-from django.conf import settings
-from django.utils import formats
+from datetime import time
+
 import pytz
+from django.conf import settings
+from django.utils import formats, timezone
 
 try:
     import sqlparse
@@ -41,7 +42,12 @@ def format_datetime(dt, include_time=True):
         dt = timezone.localtime(dt)
     except:
         local_tz = pytz.timezone(getattr(settings, 'TIME_ZONE', 'UTC'))
-        dt = local_tz.localize(dt)
+        try:
+            dt = local_tz.localize(dt)
+        except Exception as e:
+            time = time(0, 0, 0, tzinfo=timezone.get_current_timezone())
+            dt = local_tz.localize(datetime.combine(dt,time))
+
 
     use_l10n = getattr(settings, 'USE_L10N', False)
     text = formats.date_format(dt, use_l10n=use_l10n, format='SHORT_DATE_FORMAT')
