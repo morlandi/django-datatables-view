@@ -503,7 +503,12 @@ When the model provides a get_latest_by field (self.model._meta, 'get_latest_by'
 DatatablesView receives and elaborates additional parameters to further filter queryset on
 date range (unless show_date_filters is set to False).
 
+The class "get_latest_by" is added to the column used for global date filtering;
+you can use it to customize it's rendering.
+
 You are responsible for providing the necessary user interface tools as follows:
+
+Example using jquery-ui.datepicker:
 
 .. code:: javascript
 
@@ -532,6 +537,44 @@ You are responsible for providing the necessary user interface tools as follows:
                 'To: <input type="date" id="date_to" class="datepicker">' +
                 '</div>'
             );
+            $('#date_from, #date_to').on('change', function(event) {
+                table.draw();
+            });
+        }
+    </script>
+
+Example using boostrap.datepicker:
+
+.. code:: javascript
+
+    <script>
+        var parent = element.parent();
+        var table = element.DataTable({
+            ...
+            "dom": '<"toolbar">lrftip',
+            "ajax": {
+                "url": url,
+                "type": "GET",
+                "data": function (d) {
+                    d.date_from = $('#date_from').data("datepicker") ? $('#date_from').data("datepicker").getFormattedDate("yyyy-mm-dd") : '';
+                    d.date_to = $('#date_to').data("datepicker") ? $('#date_to').data("datepicker").getFormattedDate("yyyy-mm-dd") : '';
+                    console.log(d);
+                    console.log('d: %o', d);
+                }
+            },
+            ...
+        });
+        datatables_bind_row_tools(table, url);
+
+        if (data.show_date_filters) {
+            parent.find(".toolbar").html(
+                '<div class="daterange" style="float: left; margin-right: 6px;">' +
+                'Da: <input type="text" id="date_from" autocomplete="off">' +
+                '&nbsp;&nbsp;' +
+                'A: <input type="text" id="date_to" autocomplete="off">' +
+                '</div>'
+            );
+            $(".daterange #date_from, .daterange #date_to").datepicker();
             $('#date_from, #date_to').on('change', function(event) {
                 table.draw();
             });

@@ -8,6 +8,7 @@ from django.views.generic import View
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.core.paginator import Paginator
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import models
 from django.db.models import Q
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -51,7 +52,7 @@ class DatatablesView(View):
 
     # Set with self.initialize()
     column_specs = []
-    #column_specs_lut = {}
+    column_specs_lut = {}
     column_objs_lut = {}
 
     model_columns = {}
@@ -97,11 +98,8 @@ class DatatablesView(View):
 
             self.column_specs.append(column)
 
-        if ENABLE_QUERYDICT_TRACING:
-            trace(self.column_specs, prompt='column_specs')
-
-        # # build LUT for column_specs
-        # self.column_specs_lut = {c['name']: c for c in self.column_specs}
+        # build LUT for column_specs
+        self.column_specs_lut = {c['name']: c for c in self.column_specs}
 
         # build LUT for column objects
         self.column_objs_lut = Column.collect_model_columns(
@@ -113,9 +111,23 @@ class DatatablesView(View):
         date_filters = self.get_show_date_filters(request)
         # If derived class sets 'show_date_filters', respect it;
         # otherwise set according to model 'get_latest_by' attribute
+        get_latest_by = getattr(self.model._meta, 'get_latest_by', None)
         if date_filters is None:
-            date_filters = getattr(self.model._meta, 'get_latest_by', None) != None
+            date_filters = get_latest_by is not None
         self.show_date_filters = date_filters
+
+        # If global date filter is visible,
+        # add a class to 'get_latest_by' column def
+        if self.show_date_filters and get_latest_by:
+            column_def = self.column_specs_lut.get(get_latest_by, None)
+            if column_def:
+                if column_def['className']:
+                    column_def['className'] += ' get_latest_by'
+                else:
+                    column_def['className'] = 'get_latest_by'
+
+        if ENABLE_QUERYDICT_TRACING:
+            trace(self.column_specs, prompt='column_specs')
 
     def get_column_defs(self, request):
         """
@@ -423,14 +435,24 @@ class DatatablesView(View):
         # Apply date range filters
         get_latest_by = getattr(self.model._meta, 'get_latest_by', None)
         if get_latest_by:
+
+            get_latest_by_field = self.model._meta.get_field(get_latest_by)
+            is_datetime = isinstance(get_latest_by_field, models.DateTimeField)
+
             date_from = params.get('date_from', None)
             if date_from:
                 dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
-                qs = qs.filter(**{get_latest_by+'__date__gte': dt})
+                if is_datetime:
+                    qs = qs.filter(**{get_latest_by+'__date__gte': dt})
+                else:
+                    qs = qs.filter(**{get_latest_by+'__gte': dt})
             date_to = params.get('date_to', None)
             if date_to:
                 dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
-                qs = qs.filter(**{get_latest_by+'__date__lte': dt})
+                if is_datetime:
+                    qs = qs.filter(**{get_latest_by+'__date__lte': dt})
+                else:
+                    qs = qs.filter(**{get_latest_by+'__lte': dt})
 
         if 'search_value' in params:
             qs = self.filter_queryset_all_columns(params['search_value'], qs)

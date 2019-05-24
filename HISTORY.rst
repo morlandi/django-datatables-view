@@ -3,6 +3,10 @@
 History
 =======
 
+v2.0.5
+------
+* Global "get_latest_by" filtering improved
+
 v2.0.4
 ------
 * Filter tracing (for debugging)
