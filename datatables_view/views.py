@@ -175,11 +175,15 @@ class DatatablesView(View):
     #     assert name in self.column_specs_lut
     #     return self.column_specs_lut[name]
 
-    @method_decorator(csrf_exempt)
+    #@method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
+
+        if not getattr(request, 'REQUEST', None):
+            request.REQUEST = request.GET if request.method=='GET' else request.POST
+
         self.initialize(request)
         if request.is_ajax():
-            action = request.GET.get('action', '')
+            action = request.REQUEST.get('action', '')
             if action == 'initialize':
                 return JsonResponse({
                     'columns': self.column_specs,
@@ -189,7 +193,7 @@ class DatatablesView(View):
                 })
             elif action == 'details':
                 return JsonResponse({
-                    'html': self.render_row_details(request.GET.get('id'), request),
+                    'html': self.render_row_details(request.REQUEST.get('id'), request),
                 })
 
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
@@ -286,13 +290,22 @@ class DatatablesView(View):
 
     #     return html
 
+    def post(self, request, *args, **kwargs):
+        """
+        Treat POST and GET the like
+        """
+        return self.get(request, *args, **kwargs)
+
     def get(self, request, *args, **kwargs):
+
+        # if not getattr(request, 'REQUEST', None):
+        #     request.REQUEST = request.GET if request.method=='GET' else request.POST
 
         if not request.is_ajax():
             return HttpResponseBadRequest()
 
         try:
-            query_dict = request.GET
+            query_dict = request.REQUEST
             params = self.read_parameters(query_dict)
         except ValueError:
             return HttpResponseBadRequest()

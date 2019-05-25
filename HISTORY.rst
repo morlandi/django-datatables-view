@@ -3,6 +3,10 @@
 History
 =======
 
+v2.0.6
+------
+* Accept either GET or POST requests
+
 v2.0.5
 ------
 * Global "get_latest_by" filtering improved
