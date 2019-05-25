@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
-__version__ = '2.0.5'
+__version__ = '2.0.6'
 
 
 from .columns import (
