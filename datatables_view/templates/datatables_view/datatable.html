@@ -21,9 +21,6 @@
 
         $(document).ready(function() {
             initialize_datatable($('#datatable'), "");
-            setTimeout(function () {
-                datatables_adjust_table_columns();
-            }, 1000);
         });
 
         function initialize_datatable(element, url) {
@@ -35,12 +32,21 @@
             }).done(function(data, textStatus, jqXHR) {
 
                 //console.log('render data: %o', data);
-                var parent = element.parent();
+                //var parent = element.parent();
 
                 //element.html(data.html);
-                console.log(data.html);
+                //console.log(data.html);
+                console.log('initialization data: %o', data);
 
-                var table = element.DataTable({
+                // https://datatables.net/manual/api#Accessing-the-API
+                // It is important to note the difference between:
+                //    - $(selector).DataTable(): returns a DataTables API instance
+                //    - $(selector).dataTable(): returns a jQuery object
+                // An api() method is added to the jQuery object so you can easily access the API,
+                // but the jQuery object can be useful for manipulating the table node,
+                // as you would with any other jQuery instance (such as using addClass(), etc.).
+
+                var table = element.dataTable({
                     "processing": true,
                     "serverSide": true,
                     "scrollX": true,
@@ -48,6 +54,33 @@
                     //"lengthMenu": [[10, 20, 50, 100], [10, 20, 50, 100]],
                     "autoWidth": true,
                     "dom": '<"toolbar">lrftip',
+                    /*
+                    "language": {
+                        "decimal":        "",
+                        "emptyTable":     "Nessun dato disponibile per la tabella",
+                        "info":           "Visualizzate da _START_ a _END_ di _TOTAL_ entries",
+                        "infoEmpty":      "Visualizzate da 0 a 0 di 0 entries",
+                        "infoFiltered":   "(filtered from _MAX_ total entries)",
+                        "infoPostFix":    "",
+                        "thousands":      ",",
+                        "lengthMenu":     "Visualizza _MENU_ righe per pagina",
+                        "loadingRecords": "Caricamento in corso ...",
+                        "processing":     "Elaborazione in corso ...",
+                        "search":         "Cerca:",
+                        "zeroRecords":    "Nessun record trovato",
+                        "paginate": {
+                            "first":      "Prima",
+                            "last":       "Ultima",
+                            "next":       "Prossima",
+                            "previous":   "Precedente"
+                        },
+                        "aria": {
+                            "sortAscending":  ": activate to sort column ascending",
+                            "sortDescending": ": activate to sort column descending"
+                        }
+                    },
+                    */
+                    /*
                     "ajax": {
                         "url": url,
                         "type": "GET",
@@ -65,32 +98,41 @@
                             console.log('d: %o', d);
                         }
                     },
+                    */
+                    "ajax": function(data, callback, settings) {
+                          data.date_from = $('#date_from').val();
+                          data.date_to = $('#date_to').val();
+                          // data.date_from = $('#date_from').data("datepicker") ? $('#date_from').data("datepicker").getFormattedDate("yyyy-mm-dd") : '';
+                          // data.date_to = $('#date_to').data("datepicker") ? $('#date_to').data("datepicker").getFormattedDate("yyyy-mm-dd") : '';
+                          console.log("data tx: %o", data);
+                          $.ajax({
+                              type: 'POST',
+                              url: url,
+                              data: data,
+                              cache: false,
+                              crossDomain: false,
+                              headers: {'X-CSRFToken': getCookie('csrftoken')}
+                          }).done(function(data, textStatus, jqXHR) {
+                              console.log('data rx: %o', data);
+                              callback(data);
+                          }).fail(function(jqXHR, textStatus, errorThrown) {
+                              console.log('ERROR: ' + jqXHR.responseText);
+                          });
+                    },
                     "columns": data.columns,
                     "order": data.order,
-                    // "language": {
-                    //     "decimal":        "",
-                    //     "emptyTable":     "No data available in table",
-                    //     "info":           "Visualizzazione pagina _PAGE_ di _PAGES_",
-                    //     "infoEmpty":      "Nessun dato disponibile",
-                    //     "infoFiltered":   "(filtrati da _MAX_ righe disponibili)",
-                    //     "infoPostFix":    "",
-                    //     "thousands":      ",",
-                    //     "lengthMenu":     "Visualizza _MENU_ righe",
-                    //     "loadingRecords": "Caricamento in corso ...",
-                    //     "processing":     "Elaborazione in corso ...",
-                    //     "search":         "Ricerca:",
-                    //     "zeroRecords":    "Nessun dato disponibile",
-                    //     "paginate": {
-                    //         "first":      "Primo",
-                    //         "last":       "Ultimo",
-                    //         "next":       "Successivo",
-                    //         "previous":   "Precedente"
-                    //     },
-                    //     "aria": {
-                    //         "sortAscending":  ": activate to sort column ascending",
-                    //         "sortDescending": ": activate to sort column descending"
-                    //     }
-                    // },
+                    "drawCallback": function(settings) {
+                        console.log('redraw table');
+                        // setTimeout(function () {
+                        //     DatatablesViewUtils.adjust_table_columns();
+                        // }, 200);
+                    },
+                    "initComplete": function() {
+                        console.log('initComplete');
+                        setTimeout(function() {
+                            DatatablesViewUtils.adjust_table_columns();
+                        }, 200);
+                    },
                     "footerCallback": function (row, data, start, end, display) {
                         var footer_callback_message = this.api().ajax.json().footer_callback_message;
                         if (footer_callback_message) {
@@ -99,17 +141,19 @@
                     }
                 });
 
-                datatables_bind_row_tools(table, url);
 
+                var wrapper = table.closest('.dataTables_wrapper');
                 if (data.show_date_filters) {
-                    parent.find(".toolbar").html(
+                    wrapper.find(".toolbar").html(
                         'From: <input type="date" id="date_from" class="datepicker">' +
                         'To: <input type="date" id="date_to" class="datepicker">'
                     );
                     $('#date_from, #date_to').on('change', function(event) {
-                        table.draw();
+                        table.api().draw();
                     });
                 }
+
+                DatatablesViewUtils.after_initialization(table, data, url);
             });
         };
 

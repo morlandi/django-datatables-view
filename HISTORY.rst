@@ -3,6 +3,12 @@
 History
 =======
 
+v2.1.0
+------
+* `static/datatables_view/js/datatables_utils.js` renamed as `static/datatables_view/js/utils.js`
+* js helper encapsulated in DatatablesViewUtils module
+* First "almost" working column filtering - good enought for text search
+
 v2.0.6
 ------
 * Accept either GET or POST requests

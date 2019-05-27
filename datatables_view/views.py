@@ -57,6 +57,7 @@ class DatatablesView(View):
 
     model_columns = {}
     show_date_filters = None
+    show_column_filters = None
 
     def initialize(self, request):
 
@@ -117,7 +118,7 @@ class DatatablesView(View):
         self.show_date_filters = date_filters
 
         # If global date filter is visible,
-        # add a class to 'get_latest_by' column def
+        # add class 'get_latest_by' to the column used for global date filtering
         if self.show_date_filters and get_latest_by:
             column_def = self.column_specs_lut.get(get_latest_by, None)
             if column_def:
@@ -125,6 +126,16 @@ class DatatablesView(View):
                     column_def['className'] += ' get_latest_by'
                 else:
                     column_def['className'] = 'get_latest_by'
+
+        # Initialize "show_column_filters"
+        show_column_filters = self.get_show_column_filters(request)
+        if show_column_filters is not None:
+            self.show_column_filters = show_column_filters
+        else:
+            # By default we show the column filters if there is at least
+            # one searchable and visible column
+            num_searchable_columns = len([c for c in self.column_specs if c.get('searchable') and c.get('visible')])
+            self.show_column_filters = (num_searchable_columns > 0)
 
         if ENABLE_QUERYDICT_TRACING:
             trace(self.column_specs, prompt='column_specs')
@@ -161,6 +172,14 @@ class DatatablesView(View):
         """
         return self.show_date_filters
 
+    def get_show_column_filters(self, request):
+        """
+        Override to customize based of request.
+        Return either True, False or None.
+        None = check 'get_latest_by' in model's Meta.
+        """
+        return self.show_column_filters
+
     def column_obj(self, name):
         """
         Lookup columnObj for the column_spec identified by 'name'
@@ -190,6 +209,7 @@ class DatatablesView(View):
                     'order': self.get_initial_order(request),
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
+                    'show_column_filters': self.show_column_filters,
                 })
             elif action == 'details':
                 return JsonResponse({

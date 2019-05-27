@@ -738,9 +738,15 @@ as the `_meta` attribute of the model is not directly visible in this context.
                         "columns": data.columns,
                         "order": data.order,
                         "drawCallback": function(settings) {
-                            setTimeout(function () {
-                                datatables_adjust_table_columns();
-                            }, 100);
+                            //setTimeout(function () {
+                            //    DatatablesViewUtils.adjust_table_columns();
+                            //}, 100);
+                        },
+                        "initComplete": function() {
+                            console.log('initComplete');
+                            setTimeout(function() {
+                                DatatablesViewUtils.adjust_table_columns();
+                            }, 200);
                         }
                     });
                     datatables_bind_row_tools(table, url);
@@ -822,8 +828,8 @@ Workaround: Adjust the column widths of all visible tables
 .. code:: javascript
 
     setTimeout(function () {
-        datatables_adjust_table_columns();
-    }, 1000);
+        DatatablesViewUtils.adjust_table_columns();
+    }, 200);
 
 or event better:
 
@@ -831,17 +837,17 @@ or event better:
 
     var table = element.DataTable({
         ...
-        "drawCallback": function(settings) {
+        "initComplete": function(settings) {
             setTimeout(function () {
-                datatables_adjust_table_columns();
-            }, 100);
+                DatatablesViewUtils.adjust_table_columns();
+            }, 200);
         }
 
 where:
 
 .. code:: javascript
 
-    function datatables_adjust_table_columns() {
+    function adjust_table_columns() {
         // Adjust the column widths of all visible tables
         // https://datatables.net/reference/api/%24.fn.dataTable.tables()
         $.fn.dataTable
@@ -851,6 +857,7 @@ where:
             })
             .columns.adjust();
     }
+
 
 Redraw all tables
 .................
