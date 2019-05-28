@@ -3,6 +3,10 @@
 History
 =======
 
+v2.1.2
+------
+* basic support for DateField and DateTimeField filtering (exact date match)
+
 v2.1.1
 ------
 * choices lookup revised

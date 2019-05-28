@@ -3,6 +3,7 @@ import datetime
 from django.utils import timezone
 from django.conf import settings
 from django.utils import formats
+
 import pytz
 
 try:
@@ -60,3 +61,17 @@ def format_datetime(dt, include_time=True):
     if include_time:
         text += dt.strftime(' %H:%M:%S')
     return text
+
+
+def parse_date(formatted_date):
+    parsed_date = None
+    for date_format in formats.get_format('DATE_INPUT_FORMATS'):
+        try:
+            parsed_date = datetime.datetime.strptime(formatted_date, date_format)
+        except ValueError:
+            continue
+        else:
+            break
+    if not parsed_date:
+        raise ValueError
+    return parsed_date.date()
