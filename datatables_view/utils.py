@@ -24,7 +24,14 @@ def trace(message, prompt=''):
 
 def prettyprint_queryset(qs):
     print('\x1b[1;33;40m', end='')
-    message = sqlparse.format(str(qs.query), reindent=True, keyword_case='upper')
+    # https://code.djangoproject.com/ticket/22973 !!!
+    try:
+        message = sqlparse.format(str(qs.query), reindent=True, keyword_case='upper')
+    except Exception as e:
+        message = str(e)
+        if not message:
+            message = repr(e)
+        message = 'ERROR: ' + message
     print(message)
     print('\x1b[0m\n')
 

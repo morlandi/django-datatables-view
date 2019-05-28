@@ -3,6 +3,10 @@
 History
 =======
 
+v2.1.1
+------
+* choices lookup revised
+
 v2.1.0
 ------
 * `static/datatables_view/js/datatables_utils.js` renamed as `static/datatables_view/js/utils.js`
