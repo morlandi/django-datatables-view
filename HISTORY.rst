@@ -3,6 +3,14 @@
 History
 =======
 
+v2.1.3
+------
+* Remove initialize_datatable() from main project and replace with DatatablesViewUtils.initialize_table() to share common behaviour
+* Notify Datatable subscribers with various events
+* Cleanup global filtering on dates range
+* Derived view class can now specify 'latest_by' when different from model.get_latest_by
+* Documentation revised
+
 v2.1.2
 ------
 * basic support for DateField and DateTimeField filtering (exact date match)

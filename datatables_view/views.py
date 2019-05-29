@@ -36,10 +36,6 @@ from .app_settings import ENABLE_QUERYDICT_TRACING
 from .app_settings import TEST_FILTERS
 
 
-from . import __version__
-print('\x1b[41;1m UNSTABLE RELEASE %s: datatables_view refactoring in progress \x1b[0m' % __version__)
-
-
 class DatatablesView(View):
 
     # Either override in derived class, or override self.get_column_defs()
@@ -55,11 +51,23 @@ class DatatablesView(View):
     column_specs_lut = {}
     column_objs_lut = {}
 
-    model_columns = {}
+    #model_columns = {}
+    latest_by = None
     show_date_filters = None
     show_column_filters = None
 
     def initialize(self, request):
+
+        # Retrieve and normalize latest_by fieldname
+        latest_by = self.get_latest_by(request)
+        if latest_by is None:
+            latest_by = getattr(self.model._meta, 'get_latest_by', None)
+        if isinstance(latest_by, (list, tuple)):
+            latest_by = latest_by[0] if len(latest_by) > 0 else ''
+        if latest_by:
+            if latest_by.startswith('-'):
+                latest_by = latest_by[1:]
+        self.latest_by = latest_by
 
         # Grab column defs and initialize self.column_specs
         column_defs_ex = self.get_column_defs(request)
@@ -109,33 +117,29 @@ class DatatablesView(View):
         )
 
         # Initialize "show_date_filters"
-        date_filters = self.get_show_date_filters(request)
-        # If derived class sets 'show_date_filters', respect it;
-        # otherwise set according to model 'get_latest_by' attribute
-        get_latest_by = getattr(self.model._meta, 'get_latest_by', None)
-        if date_filters is None:
-            date_filters = get_latest_by is not None
-        self.show_date_filters = date_filters
+        show_date_filters = self.get_show_date_filters(request)
+        if show_date_filters is None:
+            show_date_filters = bool(self.latest_by)
+        self.show_date_filters = show_date_filters
 
         # If global date filter is visible,
         # add class 'get_latest_by' to the column used for global date filtering
-        if self.show_date_filters and get_latest_by:
-            column_def = self.column_specs_lut.get(get_latest_by, None)
+        if self.show_date_filters and self.latest_by:
+            column_def = self.column_specs_lut.get(self.latest_by, None)
             if column_def:
                 if column_def['className']:
-                    column_def['className'] += ' get_latest_by'
+                    column_def['className'] += 'latest_by'
                 else:
-                    column_def['className'] = 'get_latest_by'
+                    column_def['className'] = 'latest_by'
 
         # Initialize "show_column_filters"
         show_column_filters = self.get_show_column_filters(request)
-        if show_column_filters is not None:
-            self.show_column_filters = show_column_filters
-        else:
+        if show_column_filters is None:
             # By default we show the column filters if there is at least
             # one searchable and visible column
             num_searchable_columns = len([c for c in self.column_specs if c.get('searchable') and c.get('visible')])
-            self.show_column_filters = (num_searchable_columns > 0)
+            show_column_filters = (num_searchable_columns > 0)
+        self.show_column_filters = show_column_filters
 
         if ENABLE_QUERYDICT_TRACING:
             trace(self.column_specs, prompt='column_specs')
@@ -164,19 +168,36 @@ class DatatablesView(View):
         """
         return self.template_name
 
+    def get_latest_by(self, request):
+        """
+        Override to customize based of request.
+
+        Provides the name of the column to be used for global date range filtering.
+        Return either '', a fieldname or None.
+
+        When None is returned, in model's Meta 'get_latest_by' attributed will be used.
+        """
+        return self.latest_by
+
     def get_show_date_filters(self, request):
         """
         Override to customize based of request.
+
+        Defines whether to use the global date range filter.
         Return either True, False or None.
-        None = check 'get_latest_by' in model's Meta.
+
+        When None is returned, will'll check whether 'latest_by' is defined
         """
         return self.show_date_filters
 
     def get_show_column_filters(self, request):
         """
         Override to customize based of request.
+
+        Defines whether to use the column filters.
         Return either True, False or None.
-        None = check 'get_latest_by' in model's Meta.
+
+        When None is returned, check if at least one visible column in searchable.
         """
         return self.show_column_filters
 
@@ -343,7 +364,7 @@ class DatatablesView(View):
         # Slice result
         paginator = Paginator(qs, params['length'])
         response_dict = self.get_response_dict(paginator, params['draw'], params['start'])
-        response_dict['footer_callback_message'] = self.footer_callback_message(qs, params)
+        response_dict['footer_message'] = self.footer_message(qs, params)
 
         return HttpResponse(
             json.dumps(
@@ -465,27 +486,7 @@ class DatatablesView(View):
 
     def filter_queryset(self, params, qs):
 
-        # Apply date range filters
-        get_latest_by = getattr(self.model._meta, 'get_latest_by', None)
-        if get_latest_by:
-
-            get_latest_by_field = self.model._meta.get_field(get_latest_by)
-            is_datetime = isinstance(get_latest_by_field, models.DateTimeField)
-
-            date_from = params.get('date_from', None)
-            if date_from:
-                dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
-                if is_datetime:
-                    qs = qs.filter(**{get_latest_by+'__date__gte': dt})
-                else:
-                    qs = qs.filter(**{get_latest_by+'__gte': dt})
-            date_to = params.get('date_to', None)
-            if date_to:
-                dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
-                if is_datetime:
-                    qs = qs.filter(**{get_latest_by+'__date__lte': dt})
-                else:
-                    qs = qs.filter(**{get_latest_by+'__lte': dt})
+        qs = self.filter_queryset_by_date_range(params.get('date_from', None), params.get('date_to', None), qs)
 
         if 'search_value' in params:
             qs = self.filter_queryset_all_columns(params['search_value'], qs)
@@ -536,6 +537,42 @@ class DatatablesView(View):
     def filter_queryset_by_column(self, column_name, search_value, qs):
         return self._filter_queryset([column_name, ], search_value, qs)
 
-    def footer_callback_message(self, qs, params):
-        #return 'Selected rows: %d' % qs.count()
-        return ''
+    def filter_queryset_by_date_range(self, date_from, date_to, qs):
+
+        if self.latest_by and (date_from or date_to):
+
+            daterange_filter = Q()
+            is_datetime = isinstance(self.latest_by, models.DateTimeField)
+
+            if date_from:
+                dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
+                if is_datetime:
+                    daterange_filter &= Q(**{self.latest_by+'__date__gte': dt})
+                else:
+                    daterange_filter &= Q(**{self.latest_by+'__gte': dt})
+
+            if date_to:
+                dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
+                if is_datetime:
+                    daterange_filter &= Q(**{self.latest_by+'__date__lte': dt})
+                else:
+                    daterange_filter &= Q(**{self.latest_by+'__lte': dt})
+
+            if TEST_FILTERS:
+                n0 = qs.count()
+
+            qs = qs.filter(daterange_filter)
+
+            if TEST_FILTERS:
+                n1 = qs.count()
+                trace(daterange_filter, prompt='Daterange filter')
+                trace('%d/%d records filtered' % (n1, n0))
+
+        return qs
+
+    def footer_message(self, qs, params):
+        """
+        Overriden to append a message to the bottom of the table
+        """
+        return 'Selected rows: %d' % qs.count()
+        return None
