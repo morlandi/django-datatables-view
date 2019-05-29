@@ -20,117 +20,11 @@
     <script language="javascript">
 
         $(document).ready(function() {
-            initialize_datatable($('#datatable'), "");
-            setTimeout(function () {
-                datatables_adjust_table_columns();
-            }, 1000);
+            DatatablesViewUtils.initialize_table($('#datatable'), "");
         });
 
-        function initialize_datatable(element, url) {
-
-            $.ajax({
-                type: 'GET',
-                url: url + '?action=initialize',
-                dataType: 'json'
-            }).done(function(data, textStatus, jqXHR) {
-
-                //console.log('render data: %o', data);
-                var parent = element.parent();
-
-                //element.html(data.html);
-                console.log(data.html);
-
-                var table = element.DataTable({
-                    "processing": true,
-                    "serverSide": true,
-                    "scrollX": true,
-                    "lengthMenu": data.length_menu,
-                    //"lengthMenu": [[10, 20, 50, 100], [10, 20, 50, 100]],
-                    "autoWidth": true,
-                    "dom": '<"toolbar">lrftip',
-                    "ajax": {
-                        "url": url,
-                        "type": "GET",
-                        "data": function (d) {
-                            // var date_from = $('#date_from').data().date;
-                            // var date_to = $('#date_to').data().date;
-                            // if (date_from) {
-                            //     d.date_from = format_date_to_isoformat(date_from);
-                            // }
-                            // if (date_to) {
-                            //     d.date_to = format_date_to_isoformat(date_to);
-                            // }
-                            d.date_from = $('#date_from').val();
-                            d.date_to = $('#date_to').val();
-                            console.log('d: %o', d);
-                        }
-                    },
-                    "columns": data.columns,
-                    "order": data.order,
-                    // "language": {
-                    //     "decimal":        "",
-                    //     "emptyTable":     "No data available in table",
-                    //     "info":           "Visualizzazione pagina _PAGE_ di _PAGES_",
-                    //     "infoEmpty":      "Nessun dato disponibile",
-                    //     "infoFiltered":   "(filtrati da _MAX_ righe disponibili)",
-                    //     "infoPostFix":    "",
-                    //     "thousands":      ",",
-                    //     "lengthMenu":     "Visualizza _MENU_ righe",
-                    //     "loadingRecords": "Caricamento in corso ...",
-                    //     "processing":     "Elaborazione in corso ...",
-                    //     "search":         "Ricerca:",
-                    //     "zeroRecords":    "Nessun dato disponibile",
-                    //     "paginate": {
-                    //         "first":      "Primo",
-                    //         "last":       "Ultimo",
-                    //         "next":       "Successivo",
-                    //         "previous":   "Precedente"
-                    //     },
-                    //     "aria": {
-                    //         "sortAscending":  ": activate to sort column ascending",
-                    //         "sortDescending": ": activate to sort column descending"
-                    //     }
-                    // },
-                    "footerCallback": function (row, data, start, end, display) {
-                        var footer_callback_message = this.api().ajax.json().footer_callback_message;
-                        if (footer_callback_message) {
-                            $('#extra_footer').html(footer_callback_message);
-                        }
-                    }
-                });
-
-                datatables_bind_row_tools(table, url);
-
-                if (data.show_date_filters) {
-                    parent.find(".toolbar").html(
-                        'From: <input type="date" id="date_from" class="datepicker">' +
-                        'To: <input type="date" id="date_to" class="datepicker">'
-                    );
-                    $('#date_from, #date_to').on('change', function(event) {
-                        table.draw();
-                    });
-                }
-            });
-        };
 
             {% comment %}
-
-            // Apply the search
-            // https://datatables.net/examples/api/multi_filter.html
-            table.columns().every(function () {
-                var that = this;
-                $('input', this.header())
-                    .on('keyup change', function() {
-                        if (that.search() !== this.value) {
-                            that.search( this.value ).draw();
-                        }
-                    })
-                    // .off('click')
-                    // .on('click', function(event) {
-                    //     event.preventDefault();
-                    //     console.log('click');
-                    // });
-            });
 
             $('#btn-export').on('click', function(event) {
                 var params = table.ajax.params();
