@@ -244,6 +244,7 @@ window.DatatablesViewUtils = (function() {
                 scrollX: true,
                 autoWidth: true,
                 dom: '<"toolbar">lrftip',
+                language: _options.language,
                 // language: {
                 //     "decimal":        "",
                 //     "emptyTable":     "Nessun dato disponibile per la tabella",
