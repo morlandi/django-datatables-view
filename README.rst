@@ -1112,3 +1112,49 @@ Server-side code:
 
         return HttpResponse('ok')
 
+Possible future improvements
+============================
+
+Check these extensions:
+-----------------------
+
+- `Table row selection <https://datatables.net/extensions/select/>`_
+- `Export table data to excel of pdf <https://datatables.net/extensions/buttons/>`_
+- `Responsive table <https://datatables.net/extensions/responsive/>`_
+
+Column rendering
+----------------
+
+- specific rendering for boolean columns
+
+
+Column filtering
+----------------
+
+add a specific widget for dates
+...............................
+
+Currently, an exact match is applied; a date-range selection would be better;
+references:
+
+- https://datatables.net/plug-ins/filtering/row-based/range_dates
+- https://datatables.net/extensions/select/
+- https://github.com/RobinDev/jquery.dataTables.columnFilter.js?files=1
+
+add a specific widget for "choice" fields
+.........................................
+
+If the number of choices is limited, a select widget could be used:
+
+- https://datatables.net/examples/api/multi_filter_select.html
+
+otherwise, use autocompletion:
+
+- https://github.com/yourlabs/django-autocomplete-light
+- https://github.com/crucialfelix/django-ajax-selects
+
+add a specific widget for boolean fields
+........................................
+
+A checkbox or a select
+
