@@ -574,5 +574,5 @@ class DatatablesView(View):
         """
         Overriden to append a message to the bottom of the table
         """
-        return 'Selected rows: %d' % qs.count()
+        #return 'Selected rows: %d' % qs.count()
         return None
