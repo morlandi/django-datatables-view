@@ -3,6 +3,10 @@
 History
 =======
 
+v2.2.1
+------
+* README revised
+
 v2.2.0
 ------
 * Merge into master

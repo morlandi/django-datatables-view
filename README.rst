@@ -1,10 +1,27 @@
 
-Django Datatables Server-Side
-=============================
+django-datatables-view
+======================
 
-This package provides support to process Datatables queries in the server-side mode.
+This django app allows the integration of a Django project with the jQuery Javascript
+library DataTables.net, processing queries in the server-side mode.
 
-Adapted from:
+Basically, have to provide a specific view, derived from DatatablesView, to describe
+the desired table content and behaviour, and the app manages the interaction
+with DataTables.net
+
+Features:
+
+- Pagination
+- Column ordering
+- Global generic search
+- Global date-range search over "get_latest_by" column
+- Column specific filtering
+- Foreign key fields can be used, using the "model1__model2__field" notation
+- Customizable rendering of table rows
+- ...
+
+
+Inspired from:
 
 https://github.com/monnierj/django-datatables-server-side
 
@@ -163,7 +180,7 @@ calling **DatatablesViewUtils.initialize_table(element, url)**, which will in tu
 perform a first call (identified by the `action=initialize` parameter)
 to render the initial table layout.
 
-In this initial phase, the (base) view's responsibility is that of providing to DataTable
+In this initial phase, the (base) view's responsibility is that of providing to DataTables
 the suitable columns specifications (and other details), based on the `column_defs`
 attribute specified in the (derived) view class.
 
@@ -180,8 +197,8 @@ This is the resulting table:
 .. image:: screenshots/001.png
 
 
-View Class attributes
----------------------
+DatatablesView Class attributes
+-------------------------------
 
 Required:
 
@@ -325,7 +342,7 @@ you subscribe them:
 - rowCallback(table, row, data)
 - footerCallback(table, row, data, start, end, display)
 
-More events trigger directly by DataTables.net can be found here:
+More events triggers sent directly by DataTables.net are listed here:
 
     https://datatables.net/reference/event/
 
@@ -358,7 +375,7 @@ Example:
     </script>
 
 
-    Overridable DatatablesView methods
+Overridable DatatablesView methods
 ----------------------------------
 
 get_initial_queryset()
@@ -415,6 +432,42 @@ Example:
             'client': client,
             ...
         })
+
+footer_message()
+................
+
+You can annotate the table footer with a custom message by overridding the
+following View method.
+
+.. code:: python
+
+    def footer_message(self, qs, params):
+        """
+        Overriden to append a message to the bottom of the table
+        """
+        return None
+
+Example:
+
+.. code:: python
+
+    def footer_message(self, qs, params):
+        return 'Selected rows: %d' % qs.count()
+
+.. code:: html
+
+    <style>
+        .dataTables_wrapper .dataTables_extraFooter {
+            border: 1px solid blue;
+            color: blue;
+            padding: 8px;
+            margin-top: 8px;
+            text-align: center;
+        }
+    </style>
+
+.. image:: screenshots/005.png
+
 
 App settings
 ============
@@ -494,7 +547,7 @@ The default behaviour provided by the base class if shown below:
 .. image:: screenshots/002.png
 
 row details customization
-.........................
+-------------------------
 
 The default implementation of render_row_details() tries to load a template
 in the following order:
@@ -519,37 +572,6 @@ in the template, much like django's `admin/change_form.html` does.
 If no template is available, a simple HTML table with all field values
 is built instead.
 
-
-Debugging
----------
-
-In case of errors, Datatables.net shows an alert popup:
-
-.. image:: screenshots/006.png
-
-You can change it to trace the error in the browser console, insted:
-
-.. code:: javascript
-
-    // change DataTables' error reporting mechanism to throw a Javascript
-    // error to the browser's console, rather than alerting it.
-    $.fn.dataTable.ext.errMode = 'throw';
-
-All details of Datatables.net requests can be logged to the console by activating
-this setting::
-
-    DATATABLES_VIEW_ENABLE_QUERYDICT_TRACING = True
-
-The resulting query (before pagination) can be traced as well with::
-
-    DATATABLES_VIEW_ENABLE_QUERYSET_TRACING = True
-
-Debugging traces for date range filtering, column filtering or global filtering can be displayed
-by activating this setting::
-
-    DATATABLES_VIEW_TEST_FILTERS
-
-.. image:: screenshots/007.png
 
 Filter by global date range
 ---------------------------
@@ -598,45 +620,40 @@ use `bootstrap.datepicker`:
 
 .. image:: screenshots/004b.png
 
+Debugging
+---------
 
-Adding extra info to table footer
----------------------------------
+In case of errors, Datatables.net shows an alert popup:
 
-You can annotate the table footer with a custom message by overridding the
-following View method:
+.. image:: screenshots/006.png
 
-.. code :: python
+You can change it to trace the error in the browser console, insted:
 
-    def footer_message(self, qs, params):
-        """
-        Overriden to append a message to the bottom of the table
-        """
-        return None
+.. code:: javascript
 
-Example:
+    // change DataTables' error reporting mechanism to throw a Javascript
+    // error to the browser's console, rather than alerting it.
+    $.fn.dataTable.ext.errMode = 'throw';
 
-.. code:: python
+All details of Datatables.net requests can be logged to the console by activating
+this setting::
 
-    def footer_message(self, qs, params):
-        return 'Selected rows: %d' % qs.count()
+    DATATABLES_VIEW_ENABLE_QUERYDICT_TRACING = True
 
-.. code:: html
+The resulting query (before pagination) can be traced as well with::
 
-    <style>
-        .dataTables_wrapper .dataTables_extraFooter {
-            border: 1px solid blue;
-            color: blue;
-            padding: 8px;
-            margin-top: 8px;
-            text-align: center;
-        }
-    </style>
+    DATATABLES_VIEW_ENABLE_QUERYSET_TRACING = True
 
-.. image:: screenshots/005.png
+Debugging traces for date range filtering, column filtering or global filtering can be displayed
+by activating this setting::
+
+    DATATABLES_VIEW_TEST_FILTERS
+
+.. image:: screenshots/007.png
 
 
-Generic tables
---------------
+Generic tables (advanced topic)
+===============================
 
 Chances are you might want to supply a standard user interface for listing
 several models.
@@ -790,11 +807,11 @@ which for this example happens to be:
             }
         ]
 
-Snippets
---------
+Code Snippets
+=============
 
 Workaround: Adjust the column widths of all visible tables
-..........................................................
+----------------------------------------------------------
 
 .. code:: javascript
 
@@ -831,7 +848,7 @@ where:
 
 
 Redraw all tables
-.................
+-----------------
 
 .. code:: javascript
 
@@ -840,7 +857,7 @@ Redraw all tables
     }).draw();
 
 Redraw table holding the current paging position
-................................................
+------------------------------------------------
 
 .. code:: javascript
 
@@ -853,7 +870,7 @@ Redraw table holding the current paging position
     });
 
 change DataTables' error reporting mechanism
-............................................
+--------------------------------------------
 
 .. code:: javascript
 
@@ -863,10 +880,10 @@ change DataTables' error reporting mechanism
 
 
 Application examples
---------------------
+====================
 
 Customize row details by rendering prettified json fields
-.........................................................
+---------------------------------------------------------
 
 .. image:: screenshots/009.png
 
@@ -944,7 +961,7 @@ where:
 
 
 Change row color based on row content
-.....................................
+-------------------------------------
 
 .. image:: screenshots/010.png
 
@@ -1015,7 +1032,7 @@ This works even if the 'read' column we're interested in is actually not visible
 
 
 Modify table content on the fly (via ajax)
-..........................................
+------------------------------------------
 
 .. image:: screenshots/008.png
 
