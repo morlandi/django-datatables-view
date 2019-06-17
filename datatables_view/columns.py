@@ -152,7 +152,7 @@ class ForeignColumn(Column):
                         getattr(current_value, current_path_item)
                         for current_value in current_value.get_queryset()
                     ]
-                 except:
+                except:
                     try:
                         current_value = [getattr(f, current_path_item) for f in current_value]
                     except:
