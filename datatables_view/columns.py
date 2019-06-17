@@ -147,10 +147,16 @@ class ForeignColumn(Column):
             try:
                 current_value = getattr(current_value, current_path_item)
             except:
-                current_value = [
-                    getattr(current_value, current_path_item)
-                    for current_value in current_value.get_queryset()
-                ]
+                try:
+                    current_value = [
+                        getattr(current_value, current_path_item)
+                        for current_value in current_value.get_queryset()
+                    ]
+                 except:
+                    try:
+                        current_value = [getattr(f, current_path_item) for f in current_value]
+                    except:
+                        current_value = None
 
             if current_value is None:
                 return None
