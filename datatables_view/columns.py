@@ -9,24 +9,30 @@ class Column(object):
     def __init__(self, model_field, allow_choices_lookup=True):
         try:
             self.name = model_field.name
+            self.model_field = model_field
             choices = model_field.choices
 
             if allow_choices_lookup and choices:
                 self._choices_lookup = self.parse_choices(choices)
-                self._search_choices_lookup =\
-                    {v: k for k, v in six.iteritems(self._choices_lookup)}
+                # self._search_choices_lookup =\
+                #     {v: k for k, v in six.iteritems(self._choices_lookup)}
                 self._allow_choices_lookup = True
             else:
                 self._allow_choices_lookup = False
         except:
             self.name = model_field
+            self.model_field = None
             self._allow_choices_lookup = False
 
     @staticmethod
-    def collect_model_columns(model, columns, foreign_fields):
+    def collect_model_columns(model, column_specs):
         """
         Build a list of either Columns or ForeignColumns as required
         """
+
+        columns = [c['name'] for c in column_specs]
+        foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c['foreign_field']])
+
         fields = {f.name: f for f in model._meta.get_fields()}
         model_columns = {}
         for col_name in columns:
@@ -70,6 +76,8 @@ class Column(object):
 
         if isinstance(value, datetime.datetime):
             value = format_datetime(value, True)
+        elif isinstance(value, datetime.date):
+            value = format_datetime(value, False)
 
         return value
 
@@ -80,11 +88,14 @@ class Column(object):
             value = '???'
         return self.render_column_value(obj, value)
 
-    def search_in_choices(self, value):
+    def search_in_choices(self, pattern):
         if not self._allow_choices_lookup:
             return []
-        return [matching_value for key, matching_value in six.iteritems(
-            self._search_choices_lookup) if key.startswith(value)]
+        #return [matching_value for key, matching_value in six.iteritems(self._search_choices_lookup) if key.startswith(value)]
+        pattern = pattern.lower()
+        #values = [key for (key, text) in self._choices_lookup.items() if pattern in text.lower()]
+        values = [key for (key, text) in self._choices_lookup.items() if text.lower().startswith(pattern)]
+        return values
 
 
 class ForeignColumn(Column):
@@ -93,9 +104,7 @@ class ForeignColumn(Column):
         self._field_search_path = path_to_column
         self._field_path = path_to_column.split('__')
         foreign_field = self.get_foreign_field(model)
-
-        super(ForeignColumn, self).__init__(
-            foreign_field, allow_choices_lookup)
+        super(ForeignColumn, self).__init__(foreign_field, allow_choices_lookup)
 
     def get_field_search_path(self):
         return self._field_search_path
@@ -139,10 +148,10 @@ class ForeignColumn(Column):
                 current_value = getattr(current_value, current_path_item)
             except:
                 current_value = [
-                    getattr(current_value, current_path_item) 
+                    getattr(current_value, current_path_item)
                     for current_value in current_value.get_queryset()
                 ]
-            
+
             if current_value is None:
                 return None
 

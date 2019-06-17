@@ -8,6 +8,7 @@ from django.views.generic import View
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.core.paginator import Paginator
 from django.core.serializers.json import DjangoJSONEncoder
+from django.db import models
 from django.db.models import Q
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -16,6 +17,8 @@ from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
+from django.template import TemplateDoesNotExist
+from django.template import loader, Context
 
 
 from .columns import Column
@@ -26,96 +29,49 @@ from .columns import Order
 from .exceptions import ColumnOrderError
 from .utils import prettyprint_queryset
 from .utils import trace
+from .filters import build_column_filter
 from .app_settings import MAX_COLUMNS
 from .app_settings import ENABLE_QUERYSET_TRACING
 from .app_settings import ENABLE_QUERYDICT_TRACING
+from .app_settings import TEST_FILTERS
 
 
 class DatatablesView(View):
 
-    columns = []
-    searchable_columns = []
-    foreign_fields = {}
+    # Either override in derived class, or override self.get_column_defs()
+    column_defs = []
+
     model = None
     template_name = 'datatables_view/datatable.html'
     initial_order = [[1, "asc"]]
     length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
-    column_defs = None
+
+    # Set with self.initialize()
+    column_specs = []
+    column_specs_lut = {}
+    column_objs_lut = {}
+
+    #model_columns = {}
+    latest_by = None
     show_date_filters = None
-
-    def __init__(self, *args, **kwargs):
-        super(DatatablesView, self).__init__(*args, **kwargs)
-        # If derived class sets 'show_date_filters', respect it;
-        # otherwise set according to model 'get_latest_by' attribute
-        if self.show_date_filters is None:
-            self.show_date_filters = getattr(self.model._meta, 'get_latest_by', None) != None
-
-        columns = kwargs.pop('columns', None)
-        if columns is not None:
-            self.columns = columns
-        foreign_fields = kwargs.pop('foreign_fields', None)
-        if foreign_fields is not None:
-            self.foreign_fields = foreign_fields
-        searchable_columns = kwargs.pop('searchable_columns', None)
-        if searchable_columns is not None:
-            self.searchable_columns = searchable_columns
-        #self.initialize()
+    show_column_filters = None
 
     def initialize(self, request):
+
+        # Retrieve and normalize latest_by fieldname
+        latest_by = self.get_latest_by(request)
+        if latest_by is None:
+            latest_by = getattr(self.model._meta, 'get_latest_by', None)
+        if isinstance(latest_by, (list, tuple)):
+            latest_by = latest_by[0] if len(latest_by) > 0 else ''
+        if latest_by:
+            if latest_by.startswith('-'):
+                latest_by = latest_by[1:]
+        self.latest_by = latest_by
+
+        # Grab column defs and initialize self.column_specs
         column_defs_ex = self.get_column_defs(request)
-        if column_defs_ex:
-            self.parse_column_defs(column_defs_ex)
-        self._model_columns = Column.collect_model_columns(self.model, self.columns, self.foreign_fields)
-
-    def get_column_defs(self, request):
-        return self.column_defs
-
-    def get_initial_order(self, request):
-        return self.initial_order
-
-    def get_length_menu(self, request):
-        return self.length_menu
-
-    def get_template_name(self, request):
-        return self.template_name
-
-    def parse_column_defs(self, column_defs):
-        """
-        Use column_defs to initialize internal variables
-
-        Example:
-
-            column_defs = [{
-                'name': 'currency',
-                'title': 'Currency',
-                'searchable': True,
-                'orderable': True,
-                'visible': True,
-                'foreign_field': None,  # example: 'manager__name',
-                'placeholder': False,
-                'className': 'css-class-currency',
-            }, {
-                'name': 'active',
-                ...
-
-        """
-
-        self.columns = []
-        self.searchable_columns = []
-        self.foreign_fields = {}
-
-        for column_def in column_defs:
-            name = column_def['name']
-            self.columns.append(name)
-            visible = column_def.get('visible', True)
-            if column_def.get('searchable', True if name and visible else False):
-                self.searchable_columns.append(name)
-            if column_def.get('foreign_field', None):
-                self.foreign_fields[name] = column_def['foreign_field']
-
-    def list_columns(self, request):
-        columns = []
-        column_defs_ex = self.get_column_defs(request)
+        self.column_specs = []
         for c in column_defs_ex:
 
             column = {
@@ -125,6 +81,9 @@ class DatatablesView(View):
                 'searchable': False,
                 'orderable': False,
                 'visible': True,
+                'foreign_field': None,
+                'defaultContent': None,
+                'className': None,
             }
 
             column.update(c)
@@ -146,48 +105,191 @@ class DatatablesView(View):
                 column['searchable'] = c.get('searchable', column['visible'])
                 column['orderable'] = c.get('orderable', column['visible'])
 
-            columns.append(column)
+            self.column_specs.append(column)
+
+        # build LUT for column_specs
+        self.column_specs_lut = {c['name']: c for c in self.column_specs}
+
+        # build LUT for column objects
+        self.column_objs_lut = Column.collect_model_columns(
+            self.model,
+            self.column_specs
+        )
+
+        # Initialize "show_date_filters"
+        show_date_filters = self.get_show_date_filters(request)
+        if show_date_filters is None:
+            show_date_filters = bool(self.latest_by)
+        self.show_date_filters = show_date_filters
+
+        # If global date filter is visible,
+        # add class 'get_latest_by' to the column used for global date filtering
+        if self.show_date_filters and self.latest_by:
+            column_def = self.column_specs_lut.get(self.latest_by, None)
+            if column_def:
+                if column_def['className']:
+                    column_def['className'] += 'latest_by'
+                else:
+                    column_def['className'] = 'latest_by'
+
+        # Initialize "show_column_filters"
+        show_column_filters = self.get_show_column_filters(request)
+        if show_column_filters is None:
+            # By default we show the column filters if there is at least
+            # one searchable and visible column
+            num_searchable_columns = len([c for c in self.column_specs if c.get('searchable') and c.get('visible')])
+            show_column_filters = (num_searchable_columns > 0)
+        self.show_column_filters = show_column_filters
 
         if ENABLE_QUERYDICT_TRACING:
-            trace(columns, prompt='list_columns()')
+            trace(self.column_specs, prompt='column_specs')
 
-        return columns
+    def get_column_defs(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.column_defs
 
-    @method_decorator(csrf_exempt)
+    def get_initial_order(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.initial_order
+
+    def get_length_menu(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.length_menu
+
+    def get_template_name(self, request):
+        """
+        Override to customize based of request
+        """
+        return self.template_name
+
+    def get_latest_by(self, request):
+        """
+        Override to customize based of request.
+
+        Provides the name of the column to be used for global date range filtering.
+        Return either '', a fieldname or None.
+
+        When None is returned, in model's Meta 'get_latest_by' attributed will be used.
+        """
+        return self.latest_by
+
+    def get_show_date_filters(self, request):
+        """
+        Override to customize based of request.
+
+        Defines whether to use the global date range filter.
+        Return either True, False or None.
+
+        When None is returned, will'll check whether 'latest_by' is defined
+        """
+        return self.show_date_filters
+
+    def get_show_column_filters(self, request):
+        """
+        Override to customize based of request.
+
+        Defines whether to use the column filters.
+        Return either True, False or None.
+
+        When None is returned, check if at least one visible column in searchable.
+        """
+        return self.show_column_filters
+
+    def column_obj(self, name):
+        """
+        Lookup columnObj for the column_spec identified by 'name'
+        """
+        assert name in self.column_objs_lut
+        return self.column_objs_lut[name]
+
+    # def column_spec(self, name):
+    #     """
+    #     Lookup the column_spec identified by 'name'
+    #     """
+    #     assert name in self.column_specs_lut
+    #     return self.column_specs_lut[name]
+
+    #@method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
+
+        if not getattr(request, 'REQUEST', None):
+            request.REQUEST = request.GET if request.method=='GET' else request.POST
+
         self.initialize(request)
         if request.is_ajax():
-            action = request.GET.get('action', '')
-
-            # TODO: remove 'render' legacy value
-            if action in ['initialize', 'render', ]:
+            action = request.REQUEST.get('action', '')
+            if action == 'initialize':
                 return JsonResponse({
-                    'columns': self.list_columns(request),
+                    'columns': self.column_specs,
                     'order': self.get_initial_order(request),
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
+                    'show_column_filters': self.show_column_filters,
                 })
             elif action == 'details':
                 return JsonResponse({
-                    'html': self.render_row_details(request.GET.get('id'), request),
+                    'html': self.render_row_details(request.REQUEST.get('id'), request),
                 })
 
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
         else:
-            response = HttpResponse(self.render_table(request))
+            assert False
+            #response = HttpResponse(self.render_table(request))
         return response
 
+    # def render_row_details(self, id, request=None):
+    #     obj = self.model.objects.get(id=id)
+    #     fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
+    #     html = '<table class="row-details">'
+    #     for field in fields:
+    #         try:
+    #             value = getattr(obj, field)
+    #             html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
+    #         except:
+    #             pass
+    #     html += '</table>'
+    #     return html
+
+    def get_model_admin(self):
+        from django.contrib import admin
+        if self.model in admin.site._registry:
+            return admin.site._registry[self.model]
+        return None
+
     def render_row_details(self, id, request=None):
+
         obj = self.model.objects.get(id=id)
-        fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
-        html = '<table class="row-details">'
-        for field in fields:
-            try:
-                value = getattr(obj, field)
-                html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
-            except:
-                pass
-        html += '</table>'
+
+        # Search a custom template for rendering, if available
+        try:
+            template = loader.select_template([
+                'datatables_view/%s/%s/render_row_details.html' % (self.model._meta.app_label, self.model._meta.model_name),
+                'datatables_view/%s/render_row_details.html' % (self.model._meta.app_label, ),
+                'datatables_view/render_row_details.html',
+            ])
+            html = template.render({
+                'model': self.model,
+                'model_admin': self.get_model_admin(),
+                'object': obj,
+            }, request)
+
+        # Failing that, display a simple table with field values
+        except TemplateDoesNotExist:
+            fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
+            html = '<table class="row-details">'
+            for field in fields:
+                try:
+                    value = getattr(obj, field)
+                    html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
+                except:
+                    pass
+            html += '</table>'
         return html
 
     @staticmethod
@@ -201,41 +303,50 @@ class DatatablesView(View):
         }
         return column_def
 
-    def render_table(self, request):
+    # def render_table(self, request):
 
-        template_name = self.get_template_name(request)
+    #     template_name = self.get_template_name(request)
 
-        # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
-        # if request.is_ajax():
-        #     template_name = getattr(self, 'ajax_template_name', '')
-        #     if not template_name:
-        #         split = self.template_name.split('.html')
-        #         split[-1] = '_inner'
-        #         split.append('.html')
-        #         template_name = ''.join(split)
+    #     # # When called via Ajax, use the "smaller" template "<template_name>_inner.html"
+    #     # if request.is_ajax():
+    #     #     template_name = getattr(self, 'ajax_template_name', '')
+    #     #     if not template_name:
+    #     #         split = self.template_name.split('.html')
+    #     #         split[-1] = '_inner'
+    #     #         split.append('.html')
+    #     #         template_name = ''.join(split)
 
-        html = render_to_string(
-            template_name, {
-                'title': self.title,
-                'columns': self.list_columns(request),
-                'column_details': mark_safe(json.dumps(self.list_columns(request))),
-                'initial_order': mark_safe(json.dumps(self.get_initial_order(request))),
-                'length_menu': mark_safe(json.dumps(self.get_length_menu(request))),
-                'view': self,
-                'show_date_filter': self.model._meta.get_latest_by is not None,
-            },
-            request=request
-        )
+    #     html = render_to_string(
+    #         template_name, {
+    #             'title': self.title,
+    #             'columns': self.list_columns(request),
+    #             'column_details': mark_safe(json.dumps(self.list_columns(request))),
+    #             'initial_order': mark_safe(json.dumps(self.get_initial_order(request))),
+    #             'length_menu': mark_safe(json.dumps(self.get_length_menu(request))),
+    #             'view': self,
+    #             'show_date_filter': self.model._meta.get_latest_by is not None,
+    #         },
+    #         request=request
+    #     )
 
-        return html
+    #     return html
+
+    def post(self, request, *args, **kwargs):
+        """
+        Treat POST and GET the like
+        """
+        return self.get(request, *args, **kwargs)
 
     def get(self, request, *args, **kwargs):
+
+        # if not getattr(request, 'REQUEST', None):
+        #     request.REQUEST = request.GET if request.method=='GET' else request.POST
 
         if not request.is_ajax():
             return HttpResponseBadRequest()
 
         try:
-            query_dict = request.GET
+            query_dict = request.REQUEST
             params = self.read_parameters(query_dict)
         except ValueError:
             return HttpResponseBadRequest()
@@ -253,7 +364,7 @@ class DatatablesView(View):
         # Slice result
         paginator = Paginator(qs, params['length'])
         response_dict = self.get_response_dict(paginator, params['draw'], params['start'])
-        response_dict['footer_callback_message'] = self.footer_callback_message(qs, params)
+        response_dict['footer_message'] = self.footer_message(qs, params)
 
         return HttpResponse(
             json.dumps(
@@ -275,10 +386,8 @@ class DatatablesView(View):
         has_finished = False
         column_links = []
 
-        while column_index < MAX_COLUMNS and\
-                not has_finished:
+        while column_index < MAX_COLUMNS and not has_finished:
             column_base = 'columns[%d]' % column_index
-
             try:
                 column_name = query_dict[column_base + '[name]']
                 if column_name == '':
@@ -288,7 +397,8 @@ class DatatablesView(View):
                     column_links.append(
                         ColumnLink(
                             column_name,
-                            self._model_columns[column_name],
+                            #self.model_columns[column_name],
+                            self.column_obj(column_name),
                             query_dict.get(column_base + '[orderable]'),
                             query_dict.get(column_base + '[searchable]'),
                             query_dict.get(column_base + '[search][value]'),
@@ -304,7 +414,8 @@ class DatatablesView(View):
         orders = []
         order_index = 0
         has_finished = False
-        while order_index < len(self.columns) and not has_finished:
+        columns = [c['name'] for c in self.column_specs]
+        while order_index < len(columns) and not has_finished:
             try:
                 order_base = 'order[%d]' % order_index
                 order_column = query_dict[order_base + '[column]']
@@ -331,16 +442,17 @@ class DatatablesView(View):
         return self.model.objects.all()
 
     def render_column(self, row, column):
-        return self._model_columns[column].render_column(row)
+        #return self.model_columns[column].render_column(row)
+        return self.column_obj(column).render_column(row)
 
     def prepare_results(self, qs):
         json_data = []
-
+        columns = [c['name'] for c in self.column_specs]
         for cur_object in qs:
             retdict = {
                 #fieldname: '<div class="field-%s">%s</div>' % (fieldname, self.render_column(cur_object, fieldname))
                 fieldname: self.render_column(cur_object, fieldname)
-                for fieldname in self.columns
+                for fieldname in columns
                 if fieldname
             }
             self.customize_row(retdict, cur_object)
@@ -374,17 +486,7 @@ class DatatablesView(View):
 
     def filter_queryset(self, params, qs):
 
-        # Apply date range filters
-        get_latest_by = getattr(self.model._meta, 'get_latest_by', None)
-        if get_latest_by:
-            date_from = params.get('date_from', None)
-            if date_from:
-                dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
-                qs = qs.filter(**{get_latest_by+'__date__gte': dt})
-            date_to = params.get('date_to', None)
-            if date_to:
-                dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
-                qs = qs.filter(**{get_latest_by+'__date__lte': dt})
+        qs = self.filter_queryset_by_date_range(params.get('date_from', None), params.get('date_to', None), qs)
 
         if 'search_value' in params:
             qs = self.filter_queryset_all_columns(params['search_value'], qs)
@@ -407,40 +509,70 @@ class DatatablesView(View):
                             if key.startswith(search_value)]
         return Q(**{column + '__in': matching_choices})
 
+    def _filter_queryset(self, column_names, search_value, qs):
+
+        if TEST_FILTERS:
+            trace(', '.join(column_names), 'Filtering "%s" over fields' % search_value)
+
+        search_filters = Q()
+        for column_name in column_names:
+            column_obj = self.column_obj(column_name)
+            column_filter = build_column_filter(column_name, column_obj, search_value)
+            if column_filter:
+                search_filters |= column_filter
+                if TEST_FILTERS:
+                    trace(column_name, "Test filter")
+                    qstest = qs.filter(column_filter)
+                    trace('%d/%d records filtered' % (qstest.count(), qs.count()))
+
+        if TEST_FILTERS:
+            trace(search_filters, prompt='Search filters')
+
+        return qs.filter(search_filters)
 
     def filter_queryset_all_columns(self, search_value, qs):
-        search_filters = Q()
-        for col in self.searchable_columns:
-            model_column = self._model_columns[col]
-
-            if model_column.has_choices_available:
-                search_filters |=\
-                    Q(**{col + '__in': model_column.search_in_choices(
-                        search_value)})
-            else:
-                query_param_name = model_column.get_field_search_path()
-
-                search_filters |=\
-                    Q(**{query_param_name+'__icontains': search_value})
-                    #Q(**{query_param_name+'__istartswith': search_value})
-
-        return qs.filter(search_filters)
+        searchable_columns = [c['name'] for c in self.column_specs if c['searchable']]
+        return self._filter_queryset(searchable_columns, search_value, qs)
 
     def filter_queryset_by_column(self, column_name, search_value, qs):
-        search_filters = Q()
-        model_column = self._model_columns[column_name]
+        return self._filter_queryset([column_name, ], search_value, qs)
 
-        if model_column.has_choices_available:
-            search_filters |=\
-                Q(**{column_name + '__in': model_column.search_in_choices(search_value)})
-        else:
-            query_param_name = model_column.get_field_search_path()
-            search_filters |=\
-                Q(**{query_param_name+'__icontains': search_value})
-                #Q(**{query_param_name+'__istartswith': search_value})
+    def filter_queryset_by_date_range(self, date_from, date_to, qs):
 
-        return qs.filter(search_filters)
+        if self.latest_by and (date_from or date_to):
 
-    def footer_callback_message(self, qs, params):
+            daterange_filter = Q()
+            is_datetime = isinstance(self.latest_by, models.DateTimeField)
+
+            if date_from:
+                dt = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
+                if is_datetime:
+                    daterange_filter &= Q(**{self.latest_by+'__date__gte': dt})
+                else:
+                    daterange_filter &= Q(**{self.latest_by+'__gte': dt})
+
+            if date_to:
+                dt = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
+                if is_datetime:
+                    daterange_filter &= Q(**{self.latest_by+'__date__lte': dt})
+                else:
+                    daterange_filter &= Q(**{self.latest_by+'__lte': dt})
+
+            if TEST_FILTERS:
+                n0 = qs.count()
+
+            qs = qs.filter(daterange_filter)
+
+            if TEST_FILTERS:
+                n1 = qs.count()
+                trace(daterange_filter, prompt='Daterange filter')
+                trace('%d/%d records filtered' % (n1, n0))
+
+        return qs
+
+    def footer_message(self, qs, params):
+        """
+        Overriden to append a message to the bottom of the table
+        """
         #return 'Selected rows: %d' % qs.count()
-        return ''
+        return None
