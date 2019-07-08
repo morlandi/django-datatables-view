@@ -3,9 +3,21 @@
 History
 =======
 
-v2.2.2
+v2.2.5
+------
+* cleanup
+
+v2.2.4
 ------
 * optionally specified extra options to initialize_table()
+
+v2.2.3
+------
+* accept language options
+
+v2.2.2
+------
+* fix default footer
 
 v2.2.1
 ------
