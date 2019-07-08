@@ -241,7 +241,7 @@ window.DatatablesViewUtils = (function() {
         footer.html(html);
     }
 
-    function initialize_table(element, url) {
+    function initialize_table(element, url, extra_options={}) {
 
         $.ajax({
             type: 'GET',
@@ -257,7 +257,7 @@ window.DatatablesViewUtils = (function() {
             // but the jQuery object can be useful for manipulating the table node,
             // as you would with any other jQuery instance (such as using addClass(), etc.).
 
-            var table = element.dataTable({
+            var options = {
                 processing: true,
                 serverSide: true,
                 scrollX: true,
@@ -351,7 +351,13 @@ window.DatatablesViewUtils = (function() {
                         'footerCallback', [table, row, data, start, end, display]
                     );
                 }
-            });
+            }
+
+            if (extra_options) {
+                Object.assign(options, extra_options);
+            }
+
+            var table = element.dataTable(options);
 
             _daterange_widget_initialize(table, data);
             after_table_initialization(table, data, url);
