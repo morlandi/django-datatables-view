@@ -87,6 +87,7 @@ window.DatatablesViewUtils = (function() {
         }
     };
 
+    /*
     function getCookie(cname) {
         var name = cname + "=";
         var ca = document.cookie.split(';');
@@ -98,8 +99,14 @@ window.DatatablesViewUtils = (function() {
         }
         return "";
     }
-    
-    
+    */
+
+    function getCookie(name) {
+        var value = '; ' + document.cookie,
+            parts = value.split('; ' + name + '=');
+        if (parts.length == 2) return parts.pop().split(';').shift();
+    }
+
     function _setup_column_filters(table, data) {
 
         if (data.show_column_filters) {
