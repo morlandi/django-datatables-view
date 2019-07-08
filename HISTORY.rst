@@ -3,6 +3,10 @@
 History
 =======
 
+v2.2.2
+------
+* optionally specified extra options to initialize_table()
+
 v2.2.1
 ------
 * README revised
