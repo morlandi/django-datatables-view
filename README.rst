@@ -270,15 +270,16 @@ column_defs customizations
 Example::
 
     column_defs = [{
-        'name': 'currency',
-        'title': 'Currency',
-        'searchable': True,
-        'orderable': True,
-        'visible': True,
-        'foreign_field': 'manager__name',
-        'placeholder': False,
-        'className': 'css-class-currency',
-        'defaultContent': '<h1>test</h1>',
+        'name': 'currency',                 # required
+        'title': 'Currency',                # optional: default = field verbose_name or column name
+        'searchable': True,                 # optional: default = True is visible, False otherwise
+        'orderable': True,                  # optional: default = True is visible, False otherwise
+        'visible': True,                    # optional: default = True
+        'foreign_field': 'manager__name',   # optional: follow relation
+        'placeholder': False,               # ???
+        'className': 'css-class-currency',  # optional class name for cell
+        'defaultContent': '<h1>test</h1>',  # ???
+        'width': 300,                       # this optionally controls the minimum with of each single column
     }, {
         ...
 
