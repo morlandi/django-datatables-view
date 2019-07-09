@@ -279,7 +279,7 @@ Example::
         'placeholder': False,               # ???
         'className': 'css-class-currency',  # optional class name for cell
         'defaultContent': '<h1>test</h1>',  # ???
-        'width': 300,                       # this optionally controls the minimum with of each single column
+        'width': 300,                       # optional: controls the minimum with of each single column
     }, {
         ...
 
