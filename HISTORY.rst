@@ -3,6 +3,10 @@
 History
 =======
 
+v2.2.6
+------
+* Experimental: Optionally control the (minimum) width of each single column
+
 v2.2.5
 ------
 * cleanup
