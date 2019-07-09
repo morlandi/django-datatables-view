@@ -71,6 +71,10 @@ window.DatatablesViewUtils = (function() {
 
         */
         _options = options;
+
+        if (!('language' in _options)) {
+            _options.language = {};
+        }
     }
 
 
@@ -115,7 +119,8 @@ window.DatatablesViewUtils = (function() {
             $.each(data.columns, function(index, item) {
                 if (item.visible) {
                     if (item.searchable) {
-                        var placeholder = 'Search ' + item.title;
+                        var placeholder = (_options.language.search === undefined ? 'Search:' : _options.language.search) +
+                            ' ' + item.title;
                         filter_row += '<th><input type="text" data-index="' + index.toString() + '" placeholder="' + placeholder + '"></input></th>';
                     }
                     else {
