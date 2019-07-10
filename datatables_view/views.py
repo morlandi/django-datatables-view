@@ -300,6 +300,7 @@ class DatatablesView(View):
             # https://datatables.net/blog/2017-03-31
             'defaultContent': render_to_string('datatables_view/row_tools.html', {'foo': 'bar'}),
             "className": 'dataTables_row-tools',
+            'width': 30,
         }
         return column_def
 

@@ -29,10 +29,9 @@
 }
 
 
-/*td.dataTables_row-tools {
-    cursor: pointer;
+td.dataTables_row-tools {
+    /*cursor: pointer;*/
 }
-*/
 td.dataTables_row-tools .minus { display: none; }
 td.dataTables_row-tools .plus { display: inline; }
 
