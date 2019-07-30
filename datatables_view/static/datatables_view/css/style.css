@@ -59,8 +59,7 @@ table.details td {
 /* See: https://datatables.net/forums/discussion/30530/set-fixed-column-width  */
 
 table.dataTable {
-    table-layout: fixed;
-    /*word-wrap: break-word;*/
+    /*table-layout: fixed;*/
 }
 
 /* However, both <th> and <td> elements within the dataTables wrapper need      */

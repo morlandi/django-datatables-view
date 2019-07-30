@@ -287,6 +287,9 @@ Notes:
 
     - **title**: if not supplied, the verbose name of the model column (when available)
       or **name** will be used
+    - **width**: for this to be effective, you need to add **table-layout: fixed;** style
+      to the HTML table, but in some situations this causes problems in the computation
+      of the table columns' widths (at least in the current version 1.10.19 of Datatables.net)
 
 Computed (placeholder) columns
 ------------------------------

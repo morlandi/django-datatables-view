@@ -3,6 +3,15 @@
 History
 =======
 
+v2.2.8
+------
+* Remove `table-layout: fixed;` style from HTML table, as this causes problems in the columns' widths computation
+
+v2.2.7
+------
+* Explicitly set width of "row tools" column
+* Localize "search" prompt in column filters
+
 v2.2.6
 ------
 * Experimental: Optionally control the (minimum) width of each single column
