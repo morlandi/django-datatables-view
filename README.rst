@@ -170,13 +170,16 @@ you need another "application" view, normally based on a template.
     <script language="javascript">
 
         $(document).ready(function() {
-            DatatablesViewUtils.initialize_table($('#datatable_register'), "{% url 'frontend:datatable_register' %}");
+            DatatablesViewUtils.initialize_table(
+                $('#datatable_register'),
+                "{% url 'frontend:datatable_register' %}"
+            );
         });
 
     </script>
 
 In the template, insert a <table> element and connect it to the DataTable machinery,
-calling **DatatablesViewUtils.initialize_table(element, url)**, which will in turn
+calling **DatatablesViewUtils.initialize_table(element, url, extra_options={}, extra_data={})**, which will in turn
 perform a first call (identified by the `action=initialize` parameter)
 to render the initial table layout.
 
@@ -195,6 +198,21 @@ template `datatables_view/database.html`, unless overridden.
 This is the resulting table:
 
 .. image:: screenshots/001.png
+
+
+DatatablesViewUtils.initialize_table() parameters are:
+
+    element
+        table element
+
+    url
+        action (remote url to be called via Ajax)
+
+    extra_options={}
+        custom options for dataTable()
+
+    extra_data={}
+        extra parameters to be sent via ajax for custom filtering
 
 
 DatatablesView Class attributes
@@ -368,7 +386,7 @@ Example:
                 console.log('rowCallback(): table=%o', table);
                 console.log('rowCallback(): row=%o', row);
                 console.log('rowCallback(): data=%o', data);
-            }
+            });
 
             // Initialize table
             DatatablesViewUtils.initialize_table(

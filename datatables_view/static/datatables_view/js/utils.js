@@ -119,8 +119,8 @@ window.DatatablesViewUtils = (function() {
             $.each(data.columns, function(index, item) {
                 if (item.visible) {
                     if (item.searchable) {
-                        var placeholder = (_options.language.search === undefined ? 'Search:' : _options.language.search) +
-                            ' ' + item.title;
+                        //var placeholder = (_options.language.search === undefined ? 'Search:' : _options.language.search) + ' ' + item.title;
+                        var placeholder = '...';
                         filter_row += '<th><input type="text" data-index="' + index.toString() + '" placeholder="' + placeholder + '"></input></th>';
                     }
                     else {
@@ -246,7 +246,7 @@ window.DatatablesViewUtils = (function() {
         footer.html(html);
     }
 
-    function initialize_table(element, url, extra_options={}) {
+    function initialize_table(element, url, extra_options={}, extra_data={}) {
 
         $.ajax({
             type: 'GET',
@@ -297,6 +297,9 @@ window.DatatablesViewUtils = (function() {
                       var table = $(this);
                       data.date_from = table.data('date_from');
                       data.date_to = table.data('date_to');
+                      if (extra_data) {
+                          Object.assign(data, extra_data);
+                      }
                       console.log("data tx: %o", data);
                       $.ajax({
                           type: 'POST',

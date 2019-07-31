@@ -3,6 +3,10 @@
 History
 =======
 
+v2.2.9
+------
+* optional extra_data dictionary accepted by initialize_table()
+
 v2.2.8
 ------
 * Remove `table-layout: fixed;` style from HTML table, as this causes problems in the columns' widths computation
