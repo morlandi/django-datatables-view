@@ -3,6 +3,10 @@
 History
 =======
 
+v2.3.0
+------
+* queryset optimization
+
 v2.2.9
 ------
 * optional extra_data dictionary accepted by initialize_table()

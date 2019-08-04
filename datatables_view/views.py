@@ -34,6 +34,7 @@ from .app_settings import MAX_COLUMNS
 from .app_settings import ENABLE_QUERYSET_TRACING
 from .app_settings import ENABLE_QUERYDICT_TRACING
 from .app_settings import TEST_FILTERS
+from .app_settings import DISABLE_QUERYSET_OPTIMIZATION
 
 
 class DatatablesView(View):
@@ -55,6 +56,8 @@ class DatatablesView(View):
     latest_by = None
     show_date_filters = None
     show_column_filters = None
+
+    disable_queryset_optimization = False
 
     def initialize(self, request):
 
@@ -360,6 +363,8 @@ class DatatablesView(View):
 
         # Prepare the queryset and apply the search and order filters
         qs = self.get_initial_queryset(request)
+        if not DISABLE_QUERYSET_OPTIMIZATION and not self.disable_queryset_optimization:
+            qs = self.optimize_queryset(qs)
         qs = self.prepare_queryset(params, qs)
         if ENABLE_QUERYSET_TRACING:
             prettyprint_queryset(qs)
@@ -490,6 +495,43 @@ class DatatablesView(View):
         # 'row' is a dictionnary representing the current row, and 'obj' is the current object.
         #row['age_is_even'] = obj.age%2==0
         pass
+
+    def optimize_queryset(self, qs):
+
+        # use sets to remove duplicates
+        only = set()
+        select_related = set()
+
+        # collect values for qs optimizations
+        fields = [f.name for f in self.model._meta.get_fields()]
+        for column in self.column_specs:
+            foreign_field = column.get('foreign_field')
+            if foreign_field:
+                only.add(foreign_field)
+                select_related.add(column.get('name'))
+                # or like this ? ...
+                # select_related.add(foreign_field.split('__')[0])
+            else:
+                [f.name for f in self.model._meta.get_fields()]
+                field = column.get('name')
+                if field in fields:
+                    only.add(field)
+
+        # convert to lists
+        only = [item for item in list(only) if item]
+        select_related = list(select_related)
+
+        # apply optimizations:
+
+        # (1) use select_related() to reduce the number of queries
+        if select_related:
+            qs = qs.select_related(*select_related)
+
+        # (2) use only() to reduce the number of columns in the resultset
+        if only:
+            qs = qs.only(*only)
+
+        return qs
 
     def prepare_queryset(self, params, qs):
         qs = self.filter_queryset(params, qs)
