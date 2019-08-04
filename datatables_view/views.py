@@ -508,9 +508,8 @@ class DatatablesView(View):
             foreign_field = column.get('foreign_field')
             if foreign_field:
                 only.add(foreign_field)
-                select_related.add(column.get('name'))
-                # or like this ? ...
-                # select_related.add(foreign_field.split('__')[0])
+                #select_related.add(column.get('name'))
+                select_related.add(foreign_field.split('__')[0])
             else:
                 [f.name for f in self.model._meta.get_fields()]
                 field = column.get('name')
