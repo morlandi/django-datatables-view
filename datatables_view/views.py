@@ -343,6 +343,8 @@ class DatatablesView(View):
         # if not getattr(request, 'REQUEST', None):
         #     request.REQUEST = request.GET if request.method=='GET' else request.POST
 
+        t0 = datetime.datetime.now()
+
         if not request.is_ajax():
             return HttpResponseBadRequest()
 
@@ -367,12 +369,21 @@ class DatatablesView(View):
         response_dict = self.get_response_dict(paginator, params['draw'], params['start'])
         response_dict['footer_message'] = self.footer_message(qs, params)
 
-        return HttpResponse(
+        # Prepare response
+        response = HttpResponse(
             json.dumps(
                 response_dict,
                 cls=DjangoJSONEncoder
             ),
             content_type="application/json")
+
+        # Trace elapsed time
+        if ENABLE_QUERYSET_TRACING:
+            td = datetime.datetime.now() - t0
+            ms = (td.seconds * 1000) + (td.microseconds / 1000.0)
+            trace('%d [ms]' % ms, prompt="Table rendering time")
+
+        return response
 
     def read_parameters(self, query_dict):
         """
