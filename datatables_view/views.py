@@ -507,9 +507,21 @@ class DatatablesView(View):
         for column in self.column_specs:
             foreign_field = column.get('foreign_field')
             if foreign_field:
+
+                # Examples:
+                #
+                #   +-----------------------------+-------------------------------+-----------------------------------+
+                #   | if foreign_key is:          | add this to only[]:           | and add this to select_related[]: |
+                #   +-----------------------------+-------------------------------+-----------------------------------+
+                #   | 'lotto__codice'             | 'lotto__codice'               | 'lotto'                           |
+                #   | 'lotto__articolo__codice'   | 'lotto__articolo__codice'     | 'lotto__articolo'                 |
+                #   +-----------------------------+-------------------------------+-----------------------------------+
+                #
+
                 only.add(foreign_field)
                 #select_related.add(column.get('name'))
-                select_related.add(foreign_field.split('__')[0])
+                #select_related.add(foreign_field.split('__')[0])
+                select_related.add('__'.join(foreign_field.split('__')[0:-1]))
             else:
                 [f.name for f in self.model._meta.get_fields()]
                 field = column.get('name')

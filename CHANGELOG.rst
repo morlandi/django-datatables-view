@@ -3,6 +3,14 @@
 History
 =======
 
+v2.3.2
+------
+* improved queryset optimization
+
+v2.3.1
+------
+* fix queryset optimization
+
 v2.3.0
 ------
 * queryset optimization
