@@ -3,6 +3,10 @@
 History
 =======
 
+v.2.3.3
+-------
+* Readme updated
+
 v2.3.2
 ------
 * improved queryset optimization

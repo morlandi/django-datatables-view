@@ -172,7 +172,9 @@ you need another "application" view, normally based on a template.
         $(document).ready(function() {
             DatatablesViewUtils.initialize_table(
                 $('#datatable_register'),
-                "{% url 'frontend:datatable_register' %}"
+                "{% url 'frontend:datatable_register' %}",
+                extra_option={},
+                extra_data={}
             );
         });
 
@@ -392,7 +394,9 @@ Example:
             // Initialize table
             DatatablesViewUtils.initialize_table(
                 $('#datatable'),
-                "{% url 'frontend:object-datatable' model|app_label model|model_name %}"
+                "{% url 'frontend:object-datatable' model|app_label model|model_name %}",
+                extra_option={},
+                extra_data={}
             );
         });
     </script>
@@ -912,7 +916,9 @@ as the `_meta` attribute of the model is not directly visible in this context.
             $(document).ready(function() {
                 DatatablesViewUtils.initialize_table(
                     $('#datatable'),
-                    "{% url 'frontend:object-datatable' model|app_label model|model_name %}"
+                    "{% url 'frontend:object-datatable' model|app_label model|model_name %}",
+                    extra_option={},
+                    extra_data={}
                 );
             });
 
