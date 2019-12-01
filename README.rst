@@ -1059,6 +1059,16 @@ change DataTables' error reporting mechanism
     $.fn.dataTable.ext.errMode = 'throw';
 
 
+JS Utilities
+============
+
+- DatatablesViewUtils.init(options)
+- DatatablesViewUtils.initialize_table(element, url, extra_options={}, extra_data={})
+- DatatablesViewUtils.after_table_initialization(table, data, url)
+- DatatablesViewUtils.adjust_table_columns()
+- DatatablesViewUtils.redraw_all_tables()
+- DatatablesViewUtils.redraw_table(element)
+
 Application examples
 ====================
 

@@ -5,7 +5,7 @@ History
 
 v.2.3.3
 -------
-* Readme updated
+* Some JS utilities added
 
 v2.3.2
 ------
