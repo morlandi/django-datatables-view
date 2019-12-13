@@ -3,6 +3,10 @@
 History
 =======
 
+v.3.0.0
+-------
+* Bump major version to welcome Django 3
+
 v2.3.4
 ------
 * Add support for Django 3.0, drop Python 2
