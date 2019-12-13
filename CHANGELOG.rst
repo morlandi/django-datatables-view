@@ -3,6 +3,10 @@
 History
 =======
 
+v2.3.4
+------
+* Add support for Django 3.0, drop Python 2
+
 v.2.3.3
 -------
 * Some JS utilities added

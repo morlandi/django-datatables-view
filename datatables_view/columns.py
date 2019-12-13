@@ -1,4 +1,3 @@
-import six
 import datetime
 from .exceptions import ColumnOrderError
 from .utils import format_datetime
@@ -121,20 +120,33 @@ class ForeignColumn(Column):
                 try:
                     current_field = fields[cur_field_name]
                 except KeyError:
-                    six.reraise(
-                        KeyError,
-                        "Field %s doesn't exists (model %s, path: %s)"
-                        % (cur_field_name, current_model.__name__,
-                           '__'.join(path_items[0:idx])))
-
+                    # six.reraise(
+                    #     KeyError,
+                    #     "Field %s doesn't exists (model %s, path: %s)"
+                    #     % (cur_field_name, current_model.__name__,
+                    #        '__'.join(path_items[0:idx])))
+                    raise KeyError(
+                        "Field %s doesn't exists (model %s, path: %s)" % (
+                            cur_field_name,
+                            current_model.__name__,
+                            '__'.join(path_items[0:idx])
+                        )
+                    )
                 try:
                     current_model = current_field.related_model
                 except AttributeError:
-                    six.reraise(
-                        AttributeError,
-                        "Field %s is not a foreign key (model %s, path %s)" %
-                        (cur_field_name, current_model.__name__,
-                         '__'.join(path_items[0:idx])))
+                    # six.reraise(
+                    #     AttributeError,
+                    #     "Field %s is not a foreign key (model %s, path %s)" %
+                    #     (cur_field_name, current_model.__name__,
+                    #      '__'.join(path_items[0:idx])))
+                    raise AttributeError(
+                        "Field %s is not a foreign key (model %s, path %s)" % (
+                            cur_field_name,
+                            current_model.__name__,
+                            '__'.join(path_items[0:idx])
+                        )
+                    )
             else:
                 foreign_field = fields[cur_field_name]
 

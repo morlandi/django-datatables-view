@@ -38,6 +38,12 @@ Install the package by running:
 
     pip install git+https://github.com/morlandi/django-datatables-view
 
+or possibly a specific version:
+
+.. code:: bash
+
+    pip install git+https://github.com/morlandi/django-datatables-view@v3.0.0
+
 then add 'datatables_view' to your INSTALLED_APPS:
 
 .. code:: bash

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
-from django.utils import six
+#from django.utils import six
 
 import datetime
 import json
@@ -568,10 +568,19 @@ class DatatablesView(View):
                 *[order.get_order_mode() for order in params['orders']])
         return qs
 
+    # TODO: currently unused; in the orginal project was probably related to the
+    # management of fields with choices;
+    # check and refactor this
     def choice_field_search(self, column, search_value):
         values_dict = self.choice_fields_completion[column]
-        matching_choices = [val for key, val in six.iteritems(values_dict)
-                            if key.startswith(search_value)]
+        # matching_choices = [
+        #     val for key, val in six.iteritems(values_dict)
+        #     if key.startswith(search_value)
+        # ]
+        matching_choices = [
+            val for key, val in values_dict.items()
+            if key.startswith(search_value)
+        ]
         return Q(**{column + '__in': matching_choices})
 
     def _filter_queryset(self, column_names, search_value, qs):
