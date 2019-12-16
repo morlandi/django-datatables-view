@@ -370,23 +370,24 @@ window.DatatablesViewUtils = (function() {
             _daterange_widget_initialize(table, data);
             after_table_initialization(table, data, url);
         })
-
-
-        function redraw_all_tables() {
-            $.fn.dataTable.tables({
-                api: true
-            }).draw();
-        }
-
-
-        // Redraw table holding the current paging position
-        function redraw_table(element) {
-            var table = $(element).closest('table.dataTable');
-            // console.log('element: %o', element);
-            // console.log('table: %o', table);
-            table.DataTable().ajax.reload(null, false);
-        }
     }
+
+
+    function redraw_all_tables() {
+        $.fn.dataTable.tables({
+            api: true
+        }).draw();
+    }
+
+
+    // Redraw table holding the current paging position
+    function redraw_table(element) {
+        var table = $(element).closest('table.dataTable');
+        // console.log('element: %o', element);
+        // console.log('table: %o', table);
+        table.DataTable().ajax.reload(null, false);
+    }
+
 
     return {
         init: init,
