@@ -3,6 +3,10 @@
 History
 =======
 
+v3.0.2
+------
+* Sanity check for initial_order[]
+
 v3.0.1
 ------
 * js fix (same as v2.3.5)

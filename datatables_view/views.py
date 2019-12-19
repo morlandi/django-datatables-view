@@ -228,9 +228,19 @@ class DatatablesView(View):
         if request.is_ajax():
             action = request.REQUEST.get('action', '')
             if action == 'initialize':
+
+                # Sanity check for initial order
+                initial_order = self.get_initial_order(request)
+                initial_order_columns = [row[0] for row in initial_order]
+                for col in initial_order_columns:
+                    if col >= len(self.column_specs):
+                        raise Exception('Initial order column %d does not exists' % col)
+                    elif not self.column_specs[col]['orderable']:
+                        raise Exception('Column %d is not orderable' % col)
+
                 return JsonResponse({
                     'columns': self.column_specs,
-                    'order': self.get_initial_order(request),
+                    'order': initial_order,
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
                     'show_column_filters': self.show_column_filters,
