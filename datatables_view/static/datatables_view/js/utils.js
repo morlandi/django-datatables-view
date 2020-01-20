@@ -153,23 +153,45 @@ window.DatatablesViewUtils = (function() {
     };
 
 
-    function _bind_row_tools(table, url, custom_id='id')
+    function _bind_row_tools(table, url, full_row_select, custom_id='id')
     {
-        table.api().on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
-            event.preventDefault();
-            var tr = $(this).closest('tr');
-            var row = table.api().row(tr);
-            if (row.child.isShown()) {
-                row.child.hide();
-                tr.removeClass('shown');
-            }
-            else {
-                row.child(_load_row_details(row.data(), url, custom_id), 'details').show('slow');
-                tr.addClass('shown');
-            }
-        });
+        if (!full_row_select) {
+            table.api().on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
+                event.preventDefault();
+                var tr = $(this).closest('tr');
+                var row = table.api().row(tr);
+                if (row.child.isShown()) {
+                    row.child.hide();
+                    tr.removeClass('shown');
+                }
+                else {
+                    row.child(_load_row_details(row.data(), url, custom_id), 'details').show('slow');
+                    tr.addClass('shown');
+                }
+            });
+        }
+        else {
+            table.api().on('click', 'td', function(event) {
+                event.preventDefault();
+                var tr = $(this).closest('tr');
+                var row = table.api().row(tr);
+                if (row.child.isShown()) {
+                    row.child.hide();
+                    tr.removeClass('shown');
+                }
+                else {
+                    table.find('tr').removeClass('shown');
+                    table.api().rows().every(function( rowIdx, tableLoop, rowLoop) {
+                        this.child.hide();
+                    });
+                    if (!tr.hasClass('details')) {
+                        row.child(_load_row_details(row.data(), url, custom_id), 'details').show('slow');
+                        tr.addClass('shown');
+                    }
+                }
+            });
+        }
     };
-
 
     function _load_row_details(rowData, url, custom_id) {
         var div = $('<div/>')
@@ -230,8 +252,8 @@ window.DatatablesViewUtils = (function() {
     }
 
 
-    function after_table_initialization(table, data, url) {
-        _bind_row_tools(table, url);
+    function after_table_initialization(table, data, url, full_row_select) {
+        _bind_row_tools(table, url, full_row_select);
         _setup_column_filters(table, data);
     }
 
@@ -269,6 +291,7 @@ window.DatatablesViewUtils = (function() {
                 autoWidth: true,
                 dom: '<"toolbar">lrftip',
                 language: _options.language,
+                full_row_select: false,
                 // language: {
                 //     "decimal":        "",
                 //     "emptyTable":     "Nessun dato disponibile per la tabella",
@@ -368,7 +391,7 @@ window.DatatablesViewUtils = (function() {
             var table = element.dataTable(options);
 
             _daterange_widget_initialize(table, data);
-            after_table_initialization(table, data, url);
+            after_table_initialization(table, data, url, options.full_row_select);
         })
     }
 

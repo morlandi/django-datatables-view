@@ -3,6 +3,10 @@
 History
 =======
 
+v3.0.3
+------
+* Use `full_row_select=true` to toggled row details by clicking anywhere in the row
+
 v3.0.2
 ------
 * Sanity check for initial_order[]

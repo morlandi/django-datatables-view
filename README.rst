@@ -687,6 +687,9 @@ Add row tools as first column
 You can insert **DatatablesView.render_row_tools_column_def()** as the first element
 in `column_defs` to obtain some tools at the beginning of each table row.
 
+If `full_row_select=true` is specified as extra-option during table initialization,
+row details can be toggled by clicking anywhere in the row.
+
 `datatables_views.py`
 
 .. code:: python
