@@ -380,7 +380,7 @@ class DatatablesView(View):
             prettyprint_queryset(qs)
 
         # Slice result
-        paginator = Paginator(qs, params['length'])
+        paginator = Paginator(qs, params['length'] if params['length'] != -1 else qs.count())
         response_dict = self.get_response_dict(paginator, params['draw'], params['start'])
         response_dict['footer_message'] = self.footer_message(qs, params)
 
