@@ -546,7 +546,7 @@ class DatatablesView(View):
 
         # (1) use select_related() to reduce the number of queries
         if select_related:
-            qs = qs.select_related(*select_related)
+            qs = qs.prefetch_related(*select_related)
 
         # (2) use only() to reduce the number of columns in the resultset
         if only:
