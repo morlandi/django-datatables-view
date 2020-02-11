@@ -15,7 +15,7 @@ def get_version(*file_paths):
 
 version = get_version("datatables_view", "__init__.py")
 readme = open('README.rst').read()
-history = open('HISTORY.rst').read().replace('.. :changelog:', '')
+history = open('CHANGELOG.rst').read().replace('.. :changelog:', '')
 
 
 setup(name='django-datatables-view',

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
-from django.utils import six
+#from django.utils import six
 
 import datetime
 import json
@@ -34,6 +34,7 @@ from .app_settings import MAX_COLUMNS
 from .app_settings import ENABLE_QUERYSET_TRACING
 from .app_settings import ENABLE_QUERYDICT_TRACING
 from .app_settings import TEST_FILTERS
+from .app_settings import DISABLE_QUERYSET_OPTIMIZATION
 
 
 class DatatablesView(View):
@@ -55,6 +56,8 @@ class DatatablesView(View):
     latest_by = None
     show_date_filters = None
     show_column_filters = None
+
+    disable_queryset_optimization = False
 
     def initialize(self, request):
 
@@ -225,9 +228,19 @@ class DatatablesView(View):
         if request.is_ajax():
             action = request.REQUEST.get('action', '')
             if action == 'initialize':
+
+                # Sanity check for initial order
+                initial_order = self.get_initial_order(request)
+                initial_order_columns = [row[0] for row in initial_order]
+                for col in initial_order_columns:
+                    if col >= len(self.column_specs):
+                        raise Exception('Initial order column %d does not exists' % col)
+                    elif not self.column_specs[col]['orderable']:
+                        raise Exception('Column %d is not orderable' % col)
+
                 return JsonResponse({
                     'columns': self.column_specs,
-                    'order': self.get_initial_order(request),
+                    'order': initial_order,
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
                     'show_column_filters': self.show_column_filters,
@@ -300,6 +313,7 @@ class DatatablesView(View):
             # https://datatables.net/blog/2017-03-31
             'defaultContent': render_to_string('datatables_view/row_tools.html', {'foo': 'bar'}),
             "className": 'dataTables_row-tools',
+            'width': 30,
         }
         return column_def
 
@@ -342,6 +356,8 @@ class DatatablesView(View):
         # if not getattr(request, 'REQUEST', None):
         #     request.REQUEST = request.GET if request.method=='GET' else request.POST
 
+        t0 = datetime.datetime.now()
+
         if not request.is_ajax():
             return HttpResponseBadRequest()
 
@@ -357,21 +373,32 @@ class DatatablesView(View):
 
         # Prepare the queryset and apply the search and order filters
         qs = self.get_initial_queryset(request)
+        if not DISABLE_QUERYSET_OPTIMIZATION and not self.disable_queryset_optimization:
+            qs = self.optimize_queryset(qs)
         qs = self.prepare_queryset(params, qs)
         if ENABLE_QUERYSET_TRACING:
             prettyprint_queryset(qs)
 
         # Slice result
-        paginator = Paginator(qs, params['length'])
+        paginator = Paginator(qs, params['length'] if params['length'] != -1 else qs.count())
         response_dict = self.get_response_dict(paginator, params['draw'], params['start'])
         response_dict['footer_message'] = self.footer_message(qs, params)
 
-        return HttpResponse(
+        # Prepare response
+        response = HttpResponse(
             json.dumps(
                 response_dict,
                 cls=DjangoJSONEncoder
             ),
             content_type="application/json")
+
+        # Trace elapsed time
+        if ENABLE_QUERYSET_TRACING:
+            td = datetime.datetime.now() - t0
+            ms = (td.seconds * 1000) + (td.microseconds / 1000.0)
+            trace('%d [ms]' % ms, prompt="Table rendering time")
+
+        return response
 
     def read_parameters(self, query_dict):
         """
@@ -479,6 +506,54 @@ class DatatablesView(View):
         #row['age_is_even'] = obj.age%2==0
         pass
 
+    def optimize_queryset(self, qs):
+
+        # use sets to remove duplicates
+        only = set()
+        select_related = set()
+
+        # collect values for qs optimizations
+        fields = [f.name for f in self.model._meta.get_fields()]
+        for column in self.column_specs:
+            foreign_field = column.get('foreign_field')
+            if foreign_field:
+
+                # Examples:
+                #
+                #   +-----------------------------+-------------------------------+-----------------------------------+
+                #   | if foreign_key is:          | add this to only[]:           | and add this to select_related[]: |
+                #   +-----------------------------+-------------------------------+-----------------------------------+
+                #   | 'lotto__codice'             | 'lotto__codice'               | 'lotto'                           |
+                #   | 'lotto__articolo__codice'   | 'lotto__articolo__codice'     | 'lotto__articolo'                 |
+                #   +-----------------------------+-------------------------------+-----------------------------------+
+                #
+
+                only.add(foreign_field)
+                #select_related.add(column.get('name'))
+                #select_related.add(foreign_field.split('__')[0])
+                select_related.add('__'.join(foreign_field.split('__')[0:-1]))
+            else:
+                [f.name for f in self.model._meta.get_fields()]
+                field = column.get('name')
+                if field in fields:
+                    only.add(field)
+
+        # convert to lists
+        only = [item for item in list(only) if item]
+        select_related = list(select_related)
+
+        # apply optimizations:
+
+        # (1) use select_related() to reduce the number of queries
+        if select_related:
+            qs = qs.select_related(*select_related)
+
+        # (2) use only() to reduce the number of columns in the resultset
+        if only:
+            qs = qs.only(*only)
+
+        return qs
+
     def prepare_queryset(self, params, qs):
         qs = self.filter_queryset(params, qs)
         qs = self.sort_queryset(params, qs)
@@ -503,10 +578,19 @@ class DatatablesView(View):
                 *[order.get_order_mode() for order in params['orders']])
         return qs
 
+    # TODO: currently unused; in the orginal project was probably related to the
+    # management of fields with choices;
+    # check and refactor this
     def choice_field_search(self, column, search_value):
         values_dict = self.choice_fields_completion[column]
-        matching_choices = [val for key, val in six.iteritems(values_dict)
-                            if key.startswith(search_value)]
+        # matching_choices = [
+        #     val for key, val in six.iteritems(values_dict)
+        #     if key.startswith(search_value)
+        # ]
+        matching_choices = [
+            val for key, val in values_dict.items()
+            if key.startswith(search_value)
+        ]
         return Q(**{column + '__in': matching_choices})
 
     def _filter_queryset(self, column_names, search_value, qs):

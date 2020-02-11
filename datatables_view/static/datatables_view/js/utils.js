@@ -71,6 +71,10 @@ window.DatatablesViewUtils = (function() {
 
         */
         _options = options;
+
+        if (!('language' in _options)) {
+            _options.language = {};
+        }
     }
 
 
@@ -87,6 +91,7 @@ window.DatatablesViewUtils = (function() {
         }
     };
 
+    /*
     function getCookie(cname) {
         var name = cname + "=";
         var ca = document.cookie.split(';');
@@ -98,8 +103,14 @@ window.DatatablesViewUtils = (function() {
         }
         return "";
     }
-    
-    
+    */
+
+    function getCookie(name) {
+        var value = '; ' + document.cookie,
+            parts = value.split('; ' + name + '=');
+        if (parts.length == 2) return parts.pop().split(';').shift();
+    }
+
     function _setup_column_filters(table, data) {
 
         if (data.show_column_filters) {
@@ -108,7 +119,8 @@ window.DatatablesViewUtils = (function() {
             $.each(data.columns, function(index, item) {
                 if (item.visible) {
                     if (item.searchable) {
-                        var placeholder = 'Search ' + item.title;
+                        //var placeholder = (_options.language.search === undefined ? 'Search:' : _options.language.search) + ' ' + item.title;
+                        var placeholder = '...';
                         filter_row += '<th><input type="text" data-index="' + index.toString() + '" placeholder="' + placeholder + '"></input></th>';
                     }
                     else {
@@ -141,23 +153,45 @@ window.DatatablesViewUtils = (function() {
     };
 
 
-    function _bind_row_tools(table, url, custom_id='id')
+    function _bind_row_tools(table, url, full_row_select, custom_id='id')
     {
-        table.api().on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
-            event.preventDefault();
-            var tr = $(this).closest('tr');
-            var row = table.api().row(tr);
-            if (row.child.isShown()) {
-                row.child.hide();
-                tr.removeClass('shown');
-            }
-            else {
-                row.child(_load_row_details(row.data(), url, custom_id), 'details').show('slow');
-                tr.addClass('shown');
-            }
-        });
+        if (!full_row_select) {
+            table.api().on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
+                event.preventDefault();
+                var tr = $(this).closest('tr');
+                var row = table.api().row(tr);
+                if (row.child.isShown()) {
+                    row.child.hide();
+                    tr.removeClass('shown');
+                }
+                else {
+                    row.child(_load_row_details(row.data(), url, custom_id), 'details').show('slow');
+                    tr.addClass('shown');
+                }
+            });
+        }
+        else {
+            table.api().on('click', 'td', function(event) {
+                event.preventDefault();
+                var tr = $(this).closest('tr');
+                var row = table.api().row(tr);
+                if (row.child.isShown()) {
+                    row.child.hide();
+                    tr.removeClass('shown');
+                }
+                else {
+                    table.find('tr').removeClass('shown');
+                    table.api().rows().every(function( rowIdx, tableLoop, rowLoop) {
+                        this.child.hide();
+                    });
+                    if (!tr.hasClass('details')) {
+                        row.child(_load_row_details(row.data(), url, custom_id), 'details').show('slow');
+                        tr.addClass('shown');
+                    }
+                }
+            });
+        }
     };
-
 
     function _load_row_details(rowData, url, custom_id) {
         var div = $('<div/>')
@@ -218,8 +252,8 @@ window.DatatablesViewUtils = (function() {
     }
 
 
-    function after_table_initialization(table, data, url) {
-        _bind_row_tools(table, url);
+    function after_table_initialization(table, data, url, full_row_select) {
+        _bind_row_tools(table, url, full_row_select);
         _setup_column_filters(table, data);
     }
 
@@ -234,7 +268,7 @@ window.DatatablesViewUtils = (function() {
         footer.html(html);
     }
 
-    function initialize_table(element, url) {
+    function initialize_table(element, url, extra_options={}, extra_data={}) {
 
         $.ajax({
             type: 'GET',
@@ -250,13 +284,14 @@ window.DatatablesViewUtils = (function() {
             // but the jQuery object can be useful for manipulating the table node,
             // as you would with any other jQuery instance (such as using addClass(), etc.).
 
-            var table = element.dataTable({
+            var options = {
                 processing: true,
                 serverSide: true,
                 scrollX: true,
                 autoWidth: true,
                 dom: '<"toolbar">lrftip',
                 language: _options.language,
+                full_row_select: false,
                 // language: {
                 //     "decimal":        "",
                 //     "emptyTable":     "Nessun dato disponibile per la tabella",
@@ -285,6 +320,9 @@ window.DatatablesViewUtils = (function() {
                       var table = $(this);
                       data.date_from = table.data('date_from');
                       data.date_to = table.data('date_to');
+                      if (extra_data) {
+                          Object.assign(data, extra_data);
+                      }
                       console.log("data tx: %o", data);
                       $.ajax({
                           type: 'POST',
@@ -344,19 +382,43 @@ window.DatatablesViewUtils = (function() {
                         'footerCallback', [table, row, data, start, end, display]
                     );
                 }
-            });
+            }
+
+            if (extra_options) {
+                Object.assign(options, extra_options);
+            }
+
+            var table = element.dataTable(options);
 
             _daterange_widget_initialize(table, data);
-            after_table_initialization(table, data, url);
-        });
-
+            after_table_initialization(table, data, url, options.full_row_select);
+        })
     }
+
+
+    function redraw_all_tables() {
+        $.fn.dataTable.tables({
+            api: true
+        }).draw();
+    }
+
+
+    // Redraw table holding the current paging position
+    function redraw_table(element) {
+        var table = $(element).closest('table.dataTable');
+        // console.log('element: %o', element);
+        // console.log('table: %o', table);
+        table.DataTable().ajax.reload(null, false);
+    }
+
 
     return {
         init: init,
         initialize_table: initialize_table,
         after_table_initialization: after_table_initialization,
-        adjust_table_columns: adjust_table_columns
+        adjust_table_columns: adjust_table_columns,
+        redraw_all_tables: redraw_all_tables,
+        redraw_table: redraw_table
     };
 
 })();

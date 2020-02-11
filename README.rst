@@ -38,6 +38,12 @@ Install the package by running:
 
     pip install git+https://github.com/morlandi/django-datatables-view
 
+or possibly a specific version:
+
+.. code:: bash
+
+    pip install git+https://github.com/morlandi/django-datatables-view@v3.0.0
+
 then add 'datatables_view' to your INSTALLED_APPS:
 
 .. code:: bash
@@ -170,13 +176,18 @@ you need another "application" view, normally based on a template.
     <script language="javascript">
 
         $(document).ready(function() {
-            DatatablesViewUtils.initialize_table($('#datatable_register'), "{% url 'frontend:datatable_register' %}");
+            DatatablesViewUtils.initialize_table(
+                $('#datatable_register'),
+                "{% url 'frontend:datatable_register' %}",
+                extra_option={},
+                extra_data={}
+            );
         });
 
     </script>
 
 In the template, insert a <table> element and connect it to the DataTable machinery,
-calling **DatatablesViewUtils.initialize_table(element, url)**, which will in turn
+calling **DatatablesViewUtils.initialize_table(element, url, extra_options={}, extra_data={})**, which will in turn
 perform a first call (identified by the `action=initialize` parameter)
 to render the initial table layout.
 
@@ -197,6 +208,21 @@ This is the resulting table:
 .. image:: screenshots/001.png
 
 
+DatatablesViewUtils.initialize_table() parameters are:
+
+    element
+        table element
+
+    url
+        action (remote url to be called via Ajax)
+
+    extra_options={}
+        custom options for dataTable()
+
+    extra_data={}
+        extra parameters to be sent via ajax for custom filtering
+
+
 DatatablesView Class attributes
 -------------------------------
 
@@ -213,6 +239,7 @@ Optional:
 - latest_by = None
 - show_date_filters = None
 - show_column_filters = None
+- disable_queryset_optimization = False
 
 or override the following methods to provide attribute values at run-time,
 based on request:
@@ -270,15 +297,16 @@ column_defs customizations
 Example::
 
     column_defs = [{
-        'name': 'currency',
-        'title': 'Currency',
-        'searchable': True,
-        'orderable': True,
-        'visible': True,
-        'foreign_field': 'manager__name',
-        'placeholder': False,
-        'className': 'css-class-currency',
-        'defaultContent': '<h1>test</h1>',
+        'name': 'currency',                 # required
+        'title': 'Currency',                # optional: default = field verbose_name or column name
+        'searchable': True,                 # optional: default = True is visible, False otherwise
+        'orderable': True,                  # optional: default = True is visible, False otherwise
+        'visible': True,                    # optional: default = True
+        'foreign_field': 'manager__name',   # optional: follow relation
+        'placeholder': False,               # ???
+        'className': 'css-class-currency',  # optional class name for cell
+        'defaultContent': '<h1>test</h1>',  # ???
+        'width': 300,                       # optional: controls the minimum with of each single column
     }, {
         ...
 
@@ -286,6 +314,9 @@ Notes:
 
     - **title**: if not supplied, the verbose name of the model column (when available)
       or **name** will be used
+    - **width**: for this to be effective, you need to add **table-layout: fixed;** style
+      to the HTML table, but in some situations this causes problems in the computation
+      of the table columns' widths (at least in the current version 1.10.19 of Datatables.net)
 
 Computed (placeholder) columns
 ------------------------------
@@ -364,12 +395,14 @@ Example:
                 console.log('rowCallback(): table=%o', table);
                 console.log('rowCallback(): row=%o', row);
                 console.log('rowCallback(): data=%o', data);
-            }
+            });
 
             // Initialize table
             DatatablesViewUtils.initialize_table(
                 $('#datatable'),
-                "{% url 'frontend:object-datatable' model|app_label model|model_name %}"
+                "{% url 'frontend:object-datatable' model|app_label model|model_name %}",
+                extra_option={},
+                extra_data={}
             );
         });
     </script>
@@ -469,6 +502,150 @@ Example:
 .. image:: screenshots/005.png
 
 
+Queryset optimization
+=====================
+
+As the purpose of this module is all about querysets rendering, any chance to optimize
+data extractions from the database is more then appropriate.
+
+Starting with v2.3.0, DatatablesView tries to burst performances in two ways:
+
+1) by using `only <https://docs.djangoproject.com/en/2.2/ref/models/querysets/#only>`_ to limit the number of columns in the result set
+
+2) by using `select_related <https://docs.djangoproject.com/en/2.2/ref/models/querysets/#only>`_ to minimize the number of queries involved
+
+The parameters passed to only() and select_related() are inferred from `column_defs`.
+
+Should this cause any problem, you can disable queryset optimization in two ways:
+
+- globally: by activating the `DATATABLES_VIEW_DISABLE_QUERYSET_OPTIMIZATION` setting
+- per table: by setting to True the value of the `disable_queryset_optimization` attribute
+
+
+A real use case
+---------------
+
+(1) Plain queryset::
+
+       SELECT "tasks_devicetesttask"."id",
+              "tasks_devicetesttask"."description",
+              "tasks_devicetesttask"."created_on",
+              "tasks_devicetesttask"."created_by_id",
+              "tasks_devicetesttask"."started_on",
+              "tasks_devicetesttask"."completed_on",
+              "tasks_devicetesttask"."job_id",
+              "tasks_devicetesttask"."status",
+              "tasks_devicetesttask"."mode",
+              "tasks_devicetesttask"."failure_reason",
+              "tasks_devicetesttask"."progress",
+              "tasks_devicetesttask"."log_text",
+              "tasks_devicetesttask"."author",
+              "tasks_devicetesttask"."order",
+              "tasks_devicetesttask"."appliance_id",
+              "tasks_devicetesttask"."serial_number",
+              "tasks_devicetesttask"."program_id",
+              "tasks_devicetesttask"."position",
+              "tasks_devicetesttask"."hidden",
+              "tasks_devicetesttask"."is_duplicate",
+              "tasks_devicetesttask"."notes"
+       FROM "tasks_devicetesttask"
+       WHERE "tasks_devicetesttask"."hidden" = FALSE
+       ORDER BY "tasks_devicetesttask"."created_on" DESC
+
+    **[sql] (233ms) 203 queries with 182 duplicates**
+
+
+(2) With select_related()::
+
+       SELECT "tasks_devicetesttask"."id",
+              "tasks_devicetesttask"."description",
+              "tasks_devicetesttask"."created_on",
+              "tasks_devicetesttask"."created_by_id",
+              "tasks_devicetesttask"."started_on",
+              "tasks_devicetesttask"."completed_on",
+              "tasks_devicetesttask"."job_id",
+              "tasks_devicetesttask"."status",
+              "tasks_devicetesttask"."mode",
+              "tasks_devicetesttask"."failure_reason",
+              "tasks_devicetesttask"."progress",
+              "tasks_devicetesttask"."log_text",
+              "tasks_devicetesttask"."author",
+              "tasks_devicetesttask"."order",
+              "tasks_devicetesttask"."appliance_id",
+              "tasks_devicetesttask"."serial_number",
+              "tasks_devicetesttask"."program_id",
+              "tasks_devicetesttask"."position",
+              "tasks_devicetesttask"."hidden",
+              "tasks_devicetesttask"."is_duplicate",
+              "tasks_devicetesttask"."notes",
+              "backend_appliance"."id",
+              "backend_appliance"."description",
+              "backend_appliance"."hidden",
+              "backend_appliance"."created",
+              "backend_appliance"."created_by_id",
+              "backend_appliance"."updated",
+              "backend_appliance"."updated_by_id",
+              "backend_appliance"."type",
+              "backend_appliance"."rotation",
+              "backend_appliance"."code",
+              "backend_appliance"."barcode",
+              "backend_appliance"."mechanical_efficiency_min",
+              "backend_appliance"."mechanical_efficiency_max",
+              "backend_appliance"."volumetric_efficiency_min",
+              "backend_appliance"."volumetric_efficiency_max",
+              "backend_appliance"."displacement",
+              "backend_appliance"."speed_min",
+              "backend_appliance"."speed_max",
+              "backend_appliance"."pressure_min",
+              "backend_appliance"."pressure_max",
+              "backend_appliance"."oil_temperature_min",
+              "backend_appliance"."oil_temperature_max",
+              "backend_program"."id",
+              "backend_program"."description",
+              "backend_program"."hidden",
+              "backend_program"."created",
+              "backend_program"."created_by_id",
+              "backend_program"."updated",
+              "backend_program"."updated_by_id",
+              "backend_program"."code",
+              "backend_program"."start_datetime",
+              "backend_program"."end_datetime",
+              "backend_program"."favourite"
+       FROM "tasks_devicetesttask"
+       LEFT OUTER JOIN "backend_appliance" ON ("tasks_devicetesttask"."appliance_id" = "backend_appliance"."id")
+       LEFT OUTER JOIN "backend_program" ON ("tasks_devicetesttask"."program_id" = "backend_program"."id")
+       WHERE "tasks_devicetesttask"."hidden" = FALSE
+       ORDER BY "tasks_devicetesttask"."created_on" DESC
+
+    **[sql] (38ms) 3 queries with 0 duplicates**
+
+
+(3) With select_related() and only()::
+
+       SELECT "tasks_devicetesttask"."id",
+              "tasks_devicetesttask"."started_on",
+              "tasks_devicetesttask"."completed_on",
+              "tasks_devicetesttask"."status",
+              "tasks_devicetesttask"."failure_reason",
+              "tasks_devicetesttask"."author",
+              "tasks_devicetesttask"."order",
+              "tasks_devicetesttask"."appliance_id",
+              "tasks_devicetesttask"."serial_number",
+              "tasks_devicetesttask"."program_id",
+              "tasks_devicetesttask"."position",
+              "backend_appliance"."id",
+              "backend_appliance"."code",
+              "backend_program"."id",
+              "backend_program"."code"
+       FROM "tasks_devicetesttask"
+       LEFT OUTER JOIN "backend_appliance" ON ("tasks_devicetesttask"."appliance_id" = "backend_appliance"."id")
+       LEFT OUTER JOIN "backend_program" ON ("tasks_devicetesttask"."program_id" = "backend_program"."id")
+       WHERE "tasks_devicetesttask"."hidden" = FALSE
+       ORDER BY "tasks_devicetesttask"."created_on" DESC
+
+    **[sql] (19ms) 3 queries with 0 duplicates**
+
+
 App settings
 ============
 
@@ -494,6 +671,13 @@ DATATABLES_VIEW_TEST_FILTERS
 
     Default: False
 
+DATATABLES_VIEW_DISABLE_QUERYSET_OPTIMIZATION
+
+    When True, all queryset optimizations are disabled
+
+    Default: False
+
+
 More details
 ============
 
@@ -502,6 +686,9 @@ Add row tools as first column
 
 You can insert **DatatablesView.render_row_tools_column_def()** as the first element
 in `column_defs` to obtain some tools at the beginning of each table row.
+
+If `full_row_select=true` is specified as extra-option during table initialization,
+row details can be toggled by clicking anywhere in the row.
 
 `datatables_views.py`
 
@@ -738,7 +925,9 @@ as the `_meta` attribute of the model is not directly visible in this context.
             $(document).ready(function() {
                 DatatablesViewUtils.initialize_table(
                     $('#datatable'),
-                    "{% url 'frontend:object-datatable' model|app_label model|model_name %}"
+                    "{% url 'frontend:object-datatable' model|app_label model|model_name %}",
+                    extra_option={},
+                    extra_data={}
                 );
             });
 
@@ -878,6 +1067,16 @@ change DataTables' error reporting mechanism
     // error to the browser's console, rather than alerting it.
     $.fn.dataTable.ext.errMode = 'throw';
 
+
+JS Utilities
+============
+
+- DatatablesViewUtils.init(options)
+- DatatablesViewUtils.initialize_table(element, url, extra_options={}, extra_data={})
+- DatatablesViewUtils.after_table_initialization(table, data, url)
+- DatatablesViewUtils.adjust_table_columns()
+- DatatablesViewUtils.redraw_all_tables()
+- DatatablesViewUtils.redraw_table(element)
 
 Application examples
 ====================

@@ -29,10 +29,9 @@
 }
 
 
-/*td.dataTables_row-tools {
-    cursor: pointer;
+td.dataTables_row-tools {
+    /*cursor: pointer;*/
 }
-*/
 td.dataTables_row-tools .minus { display: none; }
 td.dataTables_row-tools .plus { display: inline; }
 
@@ -49,6 +48,35 @@ table.details td {
     color: #999;
 }
 */
+
+
+/*
+ * Experimental: Optionally control the (minimum) width of each single column
+ */
+
+/* This is required to optionally control the width of a single column         */
+/* with the 'width' option (will act more as a 'min-width', though)            */
+/* See: https://datatables.net/forums/discussion/30530/set-fixed-column-width  */
+
+table.dataTable {
+    /*table-layout: fixed;*/
+}
+
+/* However, both <th> and <td> elements within the dataTables wrapper need      */
+/* a CSS styling rule of "box-sizing: content-box" applied. This seems to       */
+/* be required for the JS to correctly calculate th widths in the docked header */
+/* See: https://datatables.net/forums/discussion/14342/column-header-not-aligned-with-column-data-with-horizontal-scrolling/p2  */
+
+/* I still notice some problems with Safari when during windows resizing, */
+/* however, all in all, still seems a good deal ;)                        */
+
+table.dataTable,
+table.dataTable th,
+table.dataTable td {
+    -webkit-box-sizing: content-box;
+    -moz-box-sizing: content-box;
+    box-sizing: content-box;
+}
 
 table.dataTable .row-details {
     padding: 0;
