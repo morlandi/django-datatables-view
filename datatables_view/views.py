@@ -238,6 +238,8 @@ class DatatablesView(View):
                     elif not self.column_specs[col]['orderable']:
                         raise Exception('Column %d is not orderable' % col)
 
+                import ipdb; ipdb.set_trace()
+
                 return JsonResponse({
                     'columns': self.column_specs,
                     'order': initial_order,

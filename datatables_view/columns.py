@@ -5,11 +5,12 @@ from .utils import format_datetime
 
 class Column(object):
 
-    def __init__(self, model_field, allow_choices_lookup=True):
+    def __init__(self, model_field, allow_choices_lookup=True, choices=None):
+
         try:
             self.name = model_field.name
             self.model_field = model_field
-            choices = model_field.choices
+            choices = model_field.choices if choices is None else choices
 
             if allow_choices_lookup and choices:
                 self._choices_lookup = self.parse_choices(choices)
@@ -29,23 +30,37 @@ class Column(object):
         Build a list of either Columns or ForeignColumns as required
         """
 
-        columns = [c['name'] for c in column_specs]
-        foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c['foreign_field']])
-
         fields = {f.name: f for f in model._meta.get_fields()}
         model_columns = {}
-        for col_name in columns:
-            if col_name in foreign_fields:
-                new_column = ForeignColumn(
-                    col_name,
-                    model,
-                    foreign_fields[col_name]
-                )
+        # columns = [c['name'] for c in column_specs]
+        # foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c['foreign_field']])
+        # for col_name in columns:
+        #     if col_name in foreign_fields:
+        #         new_column = ForeignColumn(
+        #             col_name,
+        #             model,
+        #             foreign_fields[col_name]
+        #         )
+        #     elif col_name in fields:
+        #         import ipdb; ipdb.set_trace()
+        #         new_column = Column(fields[col_name], allow_choices_lookup=True, choices=None)
+        #     else:
+        #         new_column = Column(col_name, allow_choices_lookup=True, choices=None)
+        #     model_columns[col_name] = new_column
+
+        for column_spec in column_specs:
+
+            col_name = column_spec['name']
+            foreign_field = column_spec.get('foreign_field', None)
+
+            if foreign_field is not None:
+                new_column = ForeignColumn(col_name, model, foreign_fields)
             elif col_name in fields:
-                new_column = Column(fields[col_name])
+                new_column = Column(fields[col_name], allow_choices_lookup=True, choices=column_spec.get('Xchoices', None))
             else:
-                new_column = Column(col_name)
+                new_column = Column(col_name, allow_choices_lookup=True, choices=column_spec.get('Xchoices', None))
             model_columns[col_name] = new_column
+
         return model_columns
 
     @property

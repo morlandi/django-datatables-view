@@ -119,9 +119,20 @@ window.DatatablesViewUtils = (function() {
             $.each(data.columns, function(index, item) {
                 if (item.visible) {
                     if (item.searchable) {
-                        //var placeholder = (_options.language.search === undefined ? 'Search:' : _options.language.search) + ' ' + item.title;
-                        var placeholder = '...';
-                        filter_row += '<th><input type="text" data-index="' + index.toString() + '" placeholder="' + placeholder + '"></input></th>';
+                        if ('choices' in item && item.choices.length > 0) {
+                            // See: https://www.datatables.net/examples/api/multi_filter_select.html
+                            var select = $('<select data-index="' + index.toString() + '"><option value=""></option></select>');
+                            $(item.choices).each(function(index, choice) {
+                                select.append($("<option>").attr('value', choice[0]).text(choice[1]));
+                            });
+                            var html = $('<div>').append(select).html();
+                            console.log(html);
+                            filter_row += '<th>' + html + '</th>';
+                        }
+                        else {
+                            var placeholder = '...';
+                            filter_row += '<th><input type="text" data-index="' + index.toString() + '" placeholder="' + placeholder + '"></input></th>';
+                        }
                     }
                     else {
                         if (index == 0) {
@@ -144,7 +155,7 @@ window.DatatablesViewUtils = (function() {
             );
 
             var column_filter_row = wrapper.find('.datatable-column-filter-row')
-            column_filter_row.find('input').off().on('keyup change', function(event) {
+            column_filter_row.find('input,select').off().on('keyup change', function(event) {
                 var target = $(event.target);
                 _handle_column_filter(table, data, target);
             });
