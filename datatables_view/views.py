@@ -48,9 +48,9 @@ class DatatablesView(View):
     length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
 
     # Set with self.initialize()
-    column_specs = []
-    column_specs_lut = {}
-    column_objs_lut = {}
+    column_specs = []  # used to keep column ording as required
+    column_index = {}  # used to speedup lookups
+    #column_objs_lut = {}
 
     #model_columns = {}
     latest_by = None
@@ -110,14 +110,25 @@ class DatatablesView(View):
 
             self.column_specs.append(column)
 
-        # build LUT for column_specs
-        self.column_specs_lut = {c['name']: c for c in self.column_specs}
+        # # build LUT for column objects
+        # #
+        # #    self.column_objs_lut = {
+        # #        'id': <datatables_view.columns.Column object at 0x109d82850>,
+        # #        'code': <datatables_view.columns.Column object at 0x109d82f10>,
+        # #        ...
+        # #
+        # self.column_objs_lut = Column.collect_model_columns(
+        #     self.model,
+        #     self.column_specs
+        # )
 
-        # build LUT for column objects
-        self.column_objs_lut = Column.collect_model_columns(
-            self.model,
-            self.column_specs
-        )
+        self.column_index = {}
+        for cs in self.column_specs:
+            key = cs['name']
+            self.column_index[key] = {
+                'spec': cs,
+                'column': Column.column_factory(self.model, cs),
+            }
 
         # Initialize "show_date_filters"
         show_date_filters = self.get_show_date_filters(request)
@@ -128,7 +139,7 @@ class DatatablesView(View):
         # If global date filter is visible,
         # add class 'get_latest_by' to the column used for global date filtering
         if self.show_date_filters and self.latest_by:
-            column_def = self.column_specs_lut.get(self.latest_by, None)
+            column_def = self.column_spec_by_name(self.latest_by)
             if column_def:
                 if column_def['className']:
                     column_def['className'] += 'latest_by'
@@ -208,15 +219,18 @@ class DatatablesView(View):
         """
         Lookup columnObj for the column_spec identified by 'name'
         """
-        assert name in self.column_objs_lut
-        return self.column_objs_lut[name]
+        # assert name in self.column_objs_lut
+        # return self.column_objs_lut[name]
+        assert name in self.column_index
+        return self.column_index[name]['column']
 
-    # def column_spec(self, name):
-    #     """
-    #     Lookup the column_spec identified by 'name'
-    #     """
-    #     assert name in self.column_specs_lut
-    #     return self.column_specs_lut[name]
+    def column_spec_by_name(self, name):
+        """
+        Lookup the column_spec identified by 'name'
+        """
+        if name in self.column_index:
+            return self.column_index[name]['spec']
+        return None
 
     #@method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):

@@ -33,7 +33,7 @@ class UserDatatablesView(DatatablesView):
 class UserFactory(factory.django.DjangoModelFactory):
 
     class Meta:
-        model = get_user_model()
+        model = User
 
     username = factory.Sequence(lambda n: 'username_{}'.format(n))
     password = 'password'

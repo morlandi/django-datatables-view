@@ -28,6 +28,17 @@ class DatatablesWithoutLatestByView(DatatablesView):
 class DatatablesWithLatestByView(DatatablesView):
     model = TestModelWithLatestBy
 
+    column_defs = [
+        DatatablesView.render_row_tools_column_def(),
+        {
+            'name': 'id',
+            'visible': False,
+        }, {
+            'name': 'one',
+        }, {
+            'name': 'two',
+        }
+    ]
 
 class DatatablesForceFilterView(DatatablesView):
     model = TestModelWithoutLatestBy
@@ -44,11 +55,17 @@ class TestDateFilters(unittest.TestCase):
 
         view = DatatablesWithoutLatestByView()
         view.initialize(request)
+        self.assertIsNone(view.latest_by)
         self.assertFalse(view.show_date_filters)
 
         view = DatatablesWithLatestByView()
         view.initialize(request)
+        self.assertIsNotNone(view.latest_by)
         self.assertTrue(view.show_date_filters)
+
+        column_spec = view.column_spec_by_name(view.latest_by)
+        self.assertIsNotNone(column_spec)
+        self.assertIn('latest_by', column_spec.get('className', ''))
 
         view = DatatablesForceFilterView()
         view.initialize(request)
