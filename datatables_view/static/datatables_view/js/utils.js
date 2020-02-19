@@ -83,11 +83,14 @@ window.DatatablesViewUtils = (function() {
         var value = target.val();
 
         var column = table.api().column(index);
-        if (value != column.search()) {
-            console.log('index: %o', index);
-            console.log('value: %o', value);
-            console.log('column: %o (%o)', column, column.length);
+        var old_value = column.search();
+        console.log('Request to search value %o in column %o (current value: %o)', value, index, old_value);
+        if (value != old_value) {
+            console.log('searching ...');
             column.search(value).draw();
+        }
+        else {
+            console.log('skipped');
         }
     };
 
@@ -119,11 +122,18 @@ window.DatatablesViewUtils = (function() {
             $.each(data.columns, function(index, item) {
                 if (item.visible) {
                     if (item.searchable) {
-                        if ('choices' in item && item.choices.length > 0) {
+                        if ('choices' in item && item.choices) {
+
+                            console.log('defaultChoice: %o', item.defaultChoice);
+
                             // See: https://www.datatables.net/examples/api/multi_filter_select.html
                             var select = $('<select data-index="' + index.toString() + '"><option value=""></option></select>');
                             $(item.choices).each(function(index, choice) {
-                                select.append($("<option>").attr('value', choice[0]).text(choice[1]));
+                                var option = $("<option>").attr('value', choice[0]).text(choice[1]);
+                                if (choice[0] === item.defaultChoice) {
+                                    option.attr('selected', 'selected');
+                                }
+                                select.append(option);
                             });
                             var html = $('<div>').append(select).html();
                             console.log(html);
@@ -160,6 +170,11 @@ window.DatatablesViewUtils = (function() {
                 _handle_column_filter(table, data, target);
             });
 
+            // TODO: OPTIMIZE ME
+            column_filter_row.find('input,select').each( function(index, item) {
+                var target = $(item);
+                _handle_column_filter(table, data, target);
+            });
         }
     };
 

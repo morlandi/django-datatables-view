@@ -29,6 +29,7 @@ from .columns import Order
 from .exceptions import ColumnOrderError
 from .utils import prettyprint_queryset
 from .utils import trace
+from .utils import format_datetime
 from .filters import build_column_filter
 from .app_settings import MAX_COLUMNS
 from .app_settings import ENABLE_QUERYSET_TRACING
@@ -90,6 +91,7 @@ class DatatablesView(View):
                 'defaultContent': None,
                 'width': None,
                 'choices': None,
+                'defaultChoice': None,
                 'autofilter': False,
             }
 
@@ -138,10 +140,14 @@ class DatatablesView(View):
         # )
 
         # For each table column, we build either a Columns or ForeignColumns as required;
-        #
+        # both "column spec" dictionary and the column object are saved in "column_index"
+        # to speed up later lookups;
+        # Finally, we elaborate "choices" here, since we have finally available
+        # the model field
 
         self.column_index = {}
         for cs in self.column_specs:
+
             key = cs['name']
             column = Column.column_factory(self.model, cs)
 
@@ -283,8 +289,6 @@ class DatatablesView(View):
                         raise Exception('Initial order column %d does not exists' % col)
                     elif not self.column_specs[col]['orderable']:
                         raise Exception('Column %d is not orderable' % col)
-
-                import ipdb; ipdb.set_trace()
 
                 return JsonResponse({
                     'columns': self.column_specs,
@@ -648,8 +652,11 @@ class DatatablesView(View):
 
         search_filters = Q()
         for column_name in column_names:
+
             column_obj = self.column_obj(column_name)
-            column_filter = build_column_filter(column_name, column_obj, search_value)
+            column_spec = self.column_spec_by_name(column_name)
+
+            column_filter = build_column_filter(column_name, column_obj, column_spec, search_value)
             if column_filter:
                 search_filters |= column_filter
                 if TEST_FILTERS:
@@ -726,7 +733,12 @@ class DatatablesView(View):
                 .distinct()
                 .order_by(model_field.name)
             )
-            choices = [(item, item) for item in values]
+
+            if isinstance(model_field, models.DateField):
+                choices = [(item, format_datetime(item)) for item in values]
+            else:
+                choices = [(item, item) for item in values]
+
         except Exception as e:
             # TODO: investigate what happens here with FKs
             print('ERROR: ' + str(e))
