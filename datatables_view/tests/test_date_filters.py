@@ -47,7 +47,7 @@ class DatatablesForceFilterView(DatatablesView):
         return True
 
 
-class TestDateFilters(unittest.TestCase):
+class DateFiltersTestCase(unittest.TestCase):
 
     def test_filters_flag(self):
 

@@ -78,20 +78,35 @@ class DatatablesView(View):
         for c in column_defs_ex:
 
             column = {
-                #'name': '',
+                'name': '',
                 'data': None,
                 'title': '',
                 'searchable': False,
                 'orderable': False,
                 'visible': True,
                 'foreign_field': None,
-                'defaultContent': None,
+                'placeholder': False,
                 'className': None,
+                'defaultContent': None,
+                'width': None,
+                'choices': None,
+                'autofilter': False,
             }
+
+            #valid_keys = [key for key in column.keys()][:]
+            #valid_keys = column.keys().copy()
+            valid_keys = list(column.keys())
 
             column.update(c)
 
+            # TODO: do we really want to accept an empty column name ?
+            # Investigate !
             if c['name']:
+
+                # Detect unexpected keys
+                for key in c.keys():
+                    if not key in valid_keys:
+                        raise Exception('Unexpected key "%s" for column "%s"' % (key, c['name']))
 
                 if 'title' in c:
                     title = c['title']
@@ -122,12 +137,29 @@ class DatatablesView(View):
         #     self.column_specs
         # )
 
+        # For each table column, we build either a Columns or ForeignColumns as required;
+        #
+
         self.column_index = {}
         for cs in self.column_specs:
             key = cs['name']
+            column = Column.column_factory(self.model, cs)
+
+            # Adjust choices
+            if cs['choices'] == False:
+                # Do not use choices
+                cs['choices'] = None
+            elif cs['choices'] == True:
+                # Copy from field's choices, if any ...
+                choices = getattr(column.model_field, 'choices', [])[:]
+                # ... or collect distict values if 'autofilter' has been enabled
+                if len(choices) <= 0 and cs['autofilter']:
+                    choices = self.list_autofilter_choices(request, column.model_field)
+                cs['choices'] = choices if len(choices) > 0 else None
+
             self.column_index[key] = {
                 'spec': cs,
-                'column': Column.column_factory(self.model, cs),
+                'column': column,
             }
 
         # Initialize "show_date_filters"
@@ -676,3 +708,27 @@ class DatatablesView(View):
         """
         #return 'Selected rows: %d' % qs.count()
         return None
+
+    def list_autofilter_choices(self, request, model_field):
+        """
+        Collects distinct values from specified field,
+        and prepares a list of choices for "autofilter" selection.
+        Sample result:
+            [
+                ('Alicia', 'Alicia'), ('Amanda', 'Amanda'), ('Amy', 'Amy'),
+                ...
+                ('William', 'William'), ('Yolanda', 'Yolanda'), ('Yvette', 'Yvette'),
+            ]
+        """
+        try:
+            values = (self.get_initial_queryset(request)
+                .values_list(model_field.name, flat=True)
+                .distinct()
+                .order_by(model_field.name)
+            )
+            choices = [(item, item) for item in values]
+        except Exception as e:
+            # TODO: investigate what happens here with FKs
+            print('ERROR: ' + str(e))
+            choices = []
+        return choices
