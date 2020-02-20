@@ -91,7 +91,7 @@ class DatatablesView(View):
                 'defaultContent': None,
                 'width': None,
                 'choices': None,
-                'defaultChoice': None,
+                'initialSearchValue': None,
                 'autofilter': False,
             }
 
@@ -290,8 +290,16 @@ class DatatablesView(View):
                     elif not self.column_specs[col]['orderable']:
                         raise Exception('Column %d is not orderable' % col)
 
+                # Initial values for column filters, when supplied
+                # See: https://datatables.net/reference/option/searchCols
+                searchCols = [
+                    {'search': cs['initialSearchValue'], } if cs['initialSearchValue'] is not None else None
+                    for cs in self.column_specs
+                ]
+
                 return JsonResponse({
                     'columns': self.column_specs,
+                    'searchCols': searchCols,
                     'order': initial_order,
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
@@ -456,7 +464,6 @@ class DatatablesView(View):
         """
         Converts and cleans up the GET parameters.
         """
-
         params = {field: int(query_dict[field]) for field in ['draw', 'start', 'length']}
         params['date_from'] = query_dict.get('date_from', None)
         params['date_to'] = query_dict.get('date_to', None)
