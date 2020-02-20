@@ -3,6 +3,10 @@
 History
 =======
 
+v3.1.1
+------
+* Silly JS fix
+
 v3.1.0
 ------
 * choices / autofilter support for column filters

@@ -237,17 +237,19 @@ window.DatatablesViewUtils = (function() {
             .addClass('loading')
             .text('Loading...');
 
-        $.ajax({
-            url: url,
-            data: {
-                action: 'details',
-                id: rowData[custom_id]
-            },
-            dataType: 'json',
-            success: function(json) {
-                div.html(json.html).removeClass('loading');
-            }
-        });
+        if (rowData !== undefined) {
+            $.ajax({
+                url: url,
+                data: {
+                    action: 'details',
+                    id: rowData[custom_id]
+                },
+                dataType: 'json',
+                success: function(json) {
+                    div.html(json.html).removeClass('loading');
+                }
+            });
+        }
 
         return div;
     };
