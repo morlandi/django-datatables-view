@@ -1,8 +1,7 @@
 import datetime
+from django.utils.translation import ugettext_lazy as _
 from .exceptions import ColumnOrderError
 from .utils import format_datetime
-
-
 
 
 class Column(object):
@@ -95,7 +94,8 @@ class Column(object):
             value = format_datetime(value, True)
         elif isinstance(value, datetime.date):
             value = format_datetime(value, False)
-
+        elif isinstance(value, bool):
+            value = _('Yes') if value else _('No')
         return value
 
     def render_column(self, obj):

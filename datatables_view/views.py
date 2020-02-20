@@ -19,7 +19,7 @@ from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 from django.template import TemplateDoesNotExist
 from django.template import loader, Context
-
+from django.utils.translation import ugettext_lazy as _
 
 from .columns import Column
 from .columns import ForeignColumn
@@ -142,8 +142,7 @@ class DatatablesView(View):
         # For each table column, we build either a Columns or ForeignColumns as required;
         # both "column spec" dictionary and the column object are saved in "column_index"
         # to speed up later lookups;
-        # Finally, we elaborate "choices" here, since we have finally available
-        # the model field
+        # Finally, we elaborate "choices" list
 
         self.column_index = {}
         for cs in self.column_specs:
@@ -151,17 +150,38 @@ class DatatablesView(View):
             key = cs['name']
             column = Column.column_factory(self.model, cs)
 
+            #
             # Adjust choices
+            # we do this here since the model field itself is finally available
+            #
+
+            # (1) None (default) or False: no choices (use text input box)
             if cs['choices'] == False:
                 # Do not use choices
                 cs['choices'] = None
+            # (2) True: use Model's field choices;
+            #     - failing that, we might use "autofilter"; that is: collect the list of distinct values from db table
+            #     - BooleanFields deserve a special treatement
             elif cs['choices'] == True:
-                # Copy from field's choices, if any ...
-                choices = getattr(column.model_field, 'choices', [])[:]
+
+                # For boolean fields, provide (None)/Yes/No choice sequence
+                if isinstance(column.model_field, models.BooleanField):
+                    if column.model_field.null:
+                        # UNTESTED !
+                        choices = [(None, ''), ]
+                    else:
+                        choices = []
+                    choices += [(True, _('Yes')), (False, _('No'))]
+                else:
+                    # Otherwise, retrieve field's choices, if any ...
+                    choices = getattr(column.model_field, 'choices', [])[:]
+
                 # ... or collect distict values if 'autofilter' has been enabled
                 if len(choices) <= 0 and cs['autofilter']:
-                    choices = self.list_autofilter_choices(request, column.model_field)
+                    choices = self.list_autofilter_choices(request, column.model_field, cs['initialSearchValue'])
                 cs['choices'] = choices if len(choices) > 0 else None
+            # (3) Otherwise, just use the sequence of choices that has been supplied.
+
 
             self.column_index[key] = {
                 'spec': cs,
@@ -723,7 +743,7 @@ class DatatablesView(View):
         #return 'Selected rows: %d' % qs.count()
         return None
 
-    def list_autofilter_choices(self, request, model_field):
+    def list_autofilter_choices(self, request, model_field, initialSearchValue):
         """
         Collects distinct values from specified field,
         and prepares a list of choices for "autofilter" selection.
@@ -735,11 +755,16 @@ class DatatablesView(View):
             ]
         """
         try:
-            values = (self.get_initial_queryset(request)
+            values = list(self.get_initial_queryset(request)
                 .values_list(model_field.name, flat=True)
                 .distinct()
                 .order_by(model_field.name)
             )
+
+            # Make sure initialSearchValue is available
+            if initialSearchValue is not None:
+                if initialSearchValue not in values:
+                    values.append(initialSearchValue)
 
             if isinstance(model_field, models.DateField):
                 choices = [(item, format_datetime(item)) for item in values]
