@@ -3,6 +3,12 @@
 History
 =======
 
+v3.1.0
+------
+* choices / autofilter support for column filters
+* optional *initialSearchValue* for column filters
+* **Backward incompatible change**: any unrecognized column_defs attribute will raises an exception
+
 v3.0.4
 ------
 * Support length_menu = -1 (which means: "all")

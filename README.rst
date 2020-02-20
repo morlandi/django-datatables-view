@@ -260,7 +260,7 @@ based on request:
 
     def get_latest_by(self, request):
         """
-        Override to customize based of request.
+        Override to customize based on request.
 
         Provides the name of the column to be used for global date range filtering.
         Return either '', a fieldname or None.
@@ -271,7 +271,7 @@ based on request:
 
     def get_show_date_filters(self, request):
         """
-        Override to customize based of request.
+        Override to customize based on request.
 
         Defines whether to use the global date range filter.
         Return either True, False or None.
@@ -282,7 +282,7 @@ based on request:
 
     def get_show_column_filters(self, request):
         """
-        Override to customize based of request.
+        Override to customize based on request.
 
         Defines whether to use the column filters.
         Return either True, False or None.
@@ -298,15 +298,19 @@ Example::
 
     column_defs = [{
         'name': 'currency',                 # required
+        'data': None,
         'title': 'Currency',                # optional: default = field verbose_name or column name
-        'searchable': True,                 # optional: default = True is visible, False otherwise
-        'orderable': True,                  # optional: default = True is visible, False otherwise
         'visible': True,                    # optional: default = True
+        'searchable': True,                 # optional: default = True if visible, False otherwise
+        'orderable': True,                  # optional: default = True if visible, False otherwise
         'foreign_field': 'manager__name',   # optional: follow relation
         'placeholder': False,               # ???
         'className': 'css-class-currency',  # optional class name for cell
         'defaultContent': '<h1>test</h1>',  # ???
         'width': 300,                       # optional: controls the minimum with of each single column
+        'choices': None,                    # see `Filtering single columns` below
+        'initialSearchValue': None,         # see `Filtering single columns` below
+        'autofilter': False,                # see `Filtering single columns` below
     }, {
         ...
 
@@ -317,6 +321,40 @@ Notes:
     - **width**: for this to be effective, you need to add **table-layout: fixed;** style
       to the HTML table, but in some situations this causes problems in the computation
       of the table columns' widths (at least in the current version 1.10.19 of Datatables.net)
+
+Filtering single columns
+------------------------
+
+**DatatableView.show_column_filters** (or **DatatableView.get_show_column_filters(request)**)
+defines whether to show specific filters for searchable columns as follows:
+
+    - None (default): show if at least one visible column in searchable
+    - True: always show
+    - False: always hide
+
+By default, a column filter for a searchable column is rendered as a **text input** box;
+you can instead provide a **select** box using the following attributes:
+
+choices
+    - None (default) or False: no choices (use text input box)
+    - True: use Model's field choices;
+        + failing that, we might use "autofilter"; that is: collect the list of distinct values from db table
+        + or, for **BooleanField** columns, provide (None)/Yes/No choice sequence
+    - ((key1, value1), (key2, values), ...) : use supplied sequence of choices
+
+autofilter
+    - default = False
+    - when set: if choices == True and no Model's field choices are available,
+      collects distinct values from db table (much like Excel "autofilter" feature)
+
+For the first rendering of the table:
+
+initialSearchValue
+    - optional initial value for column filter
+
+
+.. image:: screenshots/column_filtering.png
+
 
 Computed (placeholder) columns
 ------------------------------
@@ -1340,14 +1378,8 @@ references:
 - https://datatables.net/extensions/select/
 - https://github.com/RobinDev/jquery.dataTables.columnFilter.js?files=1
 
-add a specific widget for "choice" fields
-.........................................
-
-If the number of choices is limited, a select widget could be used:
-
-- https://datatables.net/examples/api/multi_filter_select.html
-
-otherwise, use autocompletion:
+support for optional autocompletion widget
+..........................................
 
 - https://github.com/yourlabs/django-autocomplete-light
 - https://github.com/crucialfelix/django-ajax-selects
