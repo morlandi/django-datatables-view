@@ -83,11 +83,14 @@ window.DatatablesViewUtils = (function() {
         var value = target.val();
 
         var column = table.api().column(index);
-        if (value != column.search()) {
-            console.log('index: %o', index);
-            console.log('value: %o', value);
-            console.log('column: %o (%o)', column, column.length);
+        var old_value = column.search();
+        console.log('Request to search value %o in column %o (current value: %o)', value, index, old_value);
+        if (value != old_value) {
+            console.log('searching ...');
             column.search(value).draw();
+        }
+        else {
+            console.log('skipped');
         }
     };
 
@@ -119,9 +122,30 @@ window.DatatablesViewUtils = (function() {
             $.each(data.columns, function(index, item) {
                 if (item.visible) {
                     if (item.searchable) {
-                        //var placeholder = (_options.language.search === undefined ? 'Search:' : _options.language.search) + ' ' + item.title;
-                        var placeholder = '...';
-                        filter_row += '<th><input type="text" data-index="' + index.toString() + '" placeholder="' + placeholder + '"></input></th>';
+                        var html = '';
+                        if ('choices' in item && item.choices) {
+
+                            // See: https://www.datatables.net/examples/api/multi_filter_select.html
+                            var select = $('<select data-index="' + index.toString() + '"><option value=""></option></select>');
+                            $(item.choices).each(function(index, choice) {
+                                var option = $("<option>").attr('value', choice[0]).text(choice[1]);
+                                if (choice[0] === item.initialSearchValue) {
+                                    option.attr('selected', 'selected');
+                                }
+                                select.append(option);
+                            });
+                            html = $('<div>').append(select).html();
+                        }
+                        else {
+                            var input = $('<input>')
+                                .attr('type', 'text')
+                                .attr('data-index', index)
+                                .attr('placeholder', '...')
+                                .attr('value', item.initialSearchValue ? item.initialSearchValue : '')
+                            html = $('<div>').append(input).html();
+                        }
+                        //console.log(html);
+                        filter_row += '<th>' + html + '</th>';
                     }
                     else {
                         if (index == 0) {
@@ -144,11 +168,26 @@ window.DatatablesViewUtils = (function() {
             );
 
             var column_filter_row = wrapper.find('.datatable-column-filter-row')
-            column_filter_row.find('input').off().on('keyup change', function(event) {
+            column_filter_row.find('input,select').off().on('keyup change', function(event) {
                 var target = $(event.target);
                 _handle_column_filter(table, data, target);
             });
 
+            /*
+            // Here, we could explicitly invoke the handler for each column filter,
+            // to make sure that the initial table contents respect any (possible)
+            // default value assigned to column filters.
+            // This works, but causes multiple POST requests during the first table rendering.
+
+            column_filter_row.find('input,select').each( function(index, item) {
+                var target = $(item);
+                _handle_column_filter(table, data, target);
+            });
+
+            So we now prefer to supply the initial search value in the column initialization:
+            see "searchCols" table attribute, as documented here:
+            https://datatables.net/reference/option/searchCols
+            */
         }
     };
 
@@ -198,17 +237,19 @@ window.DatatablesViewUtils = (function() {
             .addClass('loading')
             .text('Loading...');
 
-        $.ajax({
-            url: url,
-            data: {
-                action: 'details',
-                id: rowData[custom_id]
-            },
-            dataType: 'json',
-            success: function(json) {
-                div.html(json.html).removeClass('loading');
-            }
-        });
+        if (rowData !== undefined) {
+            $.ajax({
+                url: url,
+                data: {
+                    action: 'details',
+                    id: rowData[custom_id]
+                },
+                dataType: 'json',
+                success: function(json) {
+                    div.html(json.html).removeClass('loading');
+                }
+            });
+        }
 
         return div;
     };
@@ -346,6 +387,7 @@ window.DatatablesViewUtils = (function() {
                       });
                 },
                 columns: data.columns,
+                searchCols: data.searchCols,
                 lengthMenu: data.length_menu,
                 order: data.order,
                 initComplete: function() {

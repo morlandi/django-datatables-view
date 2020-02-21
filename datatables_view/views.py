@@ -19,7 +19,7 @@ from django.utils.safestring import mark_safe
 from django.template.loader import render_to_string
 from django.template import TemplateDoesNotExist
 from django.template import loader, Context
-
+from django.utils.translation import ugettext_lazy as _
 
 from .columns import Column
 from .columns import ForeignColumn
@@ -29,6 +29,7 @@ from .columns import Order
 from .exceptions import ColumnOrderError
 from .utils import prettyprint_queryset
 from .utils import trace
+from .utils import format_datetime
 from .filters import build_column_filter
 from .app_settings import MAX_COLUMNS
 from .app_settings import ENABLE_QUERYSET_TRACING
@@ -48,9 +49,9 @@ class DatatablesView(View):
     length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
 
     # Set with self.initialize()
-    column_specs = []
-    column_specs_lut = {}
-    column_objs_lut = {}
+    column_specs = []  # used to keep column ording as required
+    column_index = {}  # used to speedup lookups
+    #column_objs_lut = {}
 
     #model_columns = {}
     latest_by = None
@@ -78,20 +79,36 @@ class DatatablesView(View):
         for c in column_defs_ex:
 
             column = {
-                #'name': '',
+                'name': '',
                 'data': None,
                 'title': '',
                 'searchable': False,
                 'orderable': False,
                 'visible': True,
                 'foreign_field': None,
-                'defaultContent': None,
+                'placeholder': False,
                 'className': None,
+                'defaultContent': None,
+                'width': None,
+                'choices': None,
+                'initialSearchValue': None,
+                'autofilter': False,
             }
+
+            #valid_keys = [key for key in column.keys()][:]
+            #valid_keys = column.keys().copy()
+            valid_keys = list(column.keys())
 
             column.update(c)
 
+            # TODO: do we really want to accept an empty column name ?
+            # Investigate !
             if c['name']:
+
+                # Detect unexpected keys
+                for key in c.keys():
+                    if not key in valid_keys:
+                        raise Exception('Unexpected key "%s" for column "%s"' % (key, c['name']))
 
                 if 'title' in c:
                     title = c['title']
@@ -110,14 +127,66 @@ class DatatablesView(View):
 
             self.column_specs.append(column)
 
-        # build LUT for column_specs
-        self.column_specs_lut = {c['name']: c for c in self.column_specs}
+        # # build LUT for column objects
+        # #
+        # #    self.column_objs_lut = {
+        # #        'id': <datatables_view.columns.Column object at 0x109d82850>,
+        # #        'code': <datatables_view.columns.Column object at 0x109d82f10>,
+        # #        ...
+        # #
+        # self.column_objs_lut = Column.collect_model_columns(
+        #     self.model,
+        #     self.column_specs
+        # )
 
-        # build LUT for column objects
-        self.column_objs_lut = Column.collect_model_columns(
-            self.model,
-            self.column_specs
-        )
+        # For each table column, we build either a Columns or ForeignColumns as required;
+        # both "column spec" dictionary and the column object are saved in "column_index"
+        # to speed up later lookups;
+        # Finally, we elaborate "choices" list
+
+        self.column_index = {}
+        for cs in self.column_specs:
+
+            key = cs['name']
+            column = Column.column_factory(self.model, cs)
+
+            #
+            # Adjust choices
+            # we do this here since the model field itself is finally available
+            #
+
+            # (1) None (default) or False: no choices (use text input box)
+            if cs['choices'] == False:
+                # Do not use choices
+                cs['choices'] = None
+            # (2) True: use Model's field choices;
+            #     - failing that, we might use "autofilter"; that is: collect the list of distinct values from db table
+            #     - BooleanFields deserve a special treatement
+            elif cs['choices'] == True:
+
+                # For boolean fields, provide (None)/Yes/No choice sequence
+                if isinstance(column.model_field, models.BooleanField):
+                    if column.model_field.null:
+                        # UNTESTED !
+                        choices = [(None, ''), ]
+                    else:
+                        choices = []
+                    choices += [(True, _('Yes')), (False, _('No'))]
+                else:
+                    # Otherwise, retrieve field's choices, if any ...
+                    choices = getattr(column.model_field, 'choices', [])[:]
+
+                # ... or collect distict values if 'autofilter' has been enabled
+                if len(choices) <= 0 and cs['autofilter']:
+                    choices = self.list_autofilter_choices(request, column.model_field, cs['initialSearchValue'])
+                cs['choices'] = choices if len(choices) > 0 else None
+            # (3) Otherwise, just use the sequence of choices that has been supplied.
+
+
+            self.column_index[key] = {
+                'spec': cs,
+                'column': column,
+            }
 
         # Initialize "show_date_filters"
         show_date_filters = self.get_show_date_filters(request)
@@ -128,7 +197,7 @@ class DatatablesView(View):
         # If global date filter is visible,
         # add class 'get_latest_by' to the column used for global date filtering
         if self.show_date_filters and self.latest_by:
-            column_def = self.column_specs_lut.get(self.latest_by, None)
+            column_def = self.column_spec_by_name(self.latest_by)
             if column_def:
                 if column_def['className']:
                     column_def['className'] += 'latest_by'
@@ -208,15 +277,18 @@ class DatatablesView(View):
         """
         Lookup columnObj for the column_spec identified by 'name'
         """
-        assert name in self.column_objs_lut
-        return self.column_objs_lut[name]
+        # assert name in self.column_objs_lut
+        # return self.column_objs_lut[name]
+        assert name in self.column_index
+        return self.column_index[name]['column']
 
-    # def column_spec(self, name):
-    #     """
-    #     Lookup the column_spec identified by 'name'
-    #     """
-    #     assert name in self.column_specs_lut
-    #     return self.column_specs_lut[name]
+    def column_spec_by_name(self, name):
+        """
+        Lookup the column_spec identified by 'name'
+        """
+        if name in self.column_index:
+            return self.column_index[name]['spec']
+        return None
 
     #@method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
@@ -238,8 +310,16 @@ class DatatablesView(View):
                     elif not self.column_specs[col]['orderable']:
                         raise Exception('Column %d is not orderable' % col)
 
+                # Initial values for column filters, when supplied
+                # See: https://datatables.net/reference/option/searchCols
+                searchCols = [
+                    {'search': cs['initialSearchValue'], } if cs['initialSearchValue'] is not None else None
+                    for cs in self.column_specs
+                ]
+
                 return JsonResponse({
                     'columns': self.column_specs,
+                    'searchCols': searchCols,
                     'order': initial_order,
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
@@ -404,7 +484,6 @@ class DatatablesView(View):
         """
         Converts and cleans up the GET parameters.
         """
-
         params = {field: int(query_dict[field]) for field in ['draw', 'start', 'length']}
         params['date_from'] = query_dict.get('date_from', None)
         params['date_to'] = query_dict.get('date_to', None)
@@ -600,8 +679,11 @@ class DatatablesView(View):
 
         search_filters = Q()
         for column_name in column_names:
+
             column_obj = self.column_obj(column_name)
-            column_filter = build_column_filter(column_name, column_obj, search_value)
+            column_spec = self.column_spec_by_name(column_name)
+
+            column_filter = build_column_filter(column_name, column_obj, column_spec, search_value)
             if column_filter:
                 search_filters |= column_filter
                 if TEST_FILTERS:
@@ -660,3 +742,37 @@ class DatatablesView(View):
         """
         #return 'Selected rows: %d' % qs.count()
         return None
+
+    def list_autofilter_choices(self, request, model_field, initialSearchValue):
+        """
+        Collects distinct values from specified field,
+        and prepares a list of choices for "autofilter" selection.
+        Sample result:
+            [
+                ('Alicia', 'Alicia'), ('Amanda', 'Amanda'), ('Amy', 'Amy'),
+                ...
+                ('William', 'William'), ('Yolanda', 'Yolanda'), ('Yvette', 'Yvette'),
+            ]
+        """
+        try:
+            values = list(self.get_initial_queryset(request)
+                .values_list(model_field.name, flat=True)
+                .distinct()
+                .order_by(model_field.name)
+            )
+
+            # Make sure initialSearchValue is available
+            if initialSearchValue is not None:
+                if initialSearchValue not in values:
+                    values.append(initialSearchValue)
+
+            if isinstance(model_field, models.DateField):
+                choices = [(item, format_datetime(item)) for item in values]
+            else:
+                choices = [(item, item) for item in values]
+
+        except Exception as e:
+            # TODO: investigate what happens here with FKs
+            print('ERROR: ' + str(e))
+            choices = []
+        return choices

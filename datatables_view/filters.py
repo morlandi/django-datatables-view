@@ -5,14 +5,24 @@ from django.db import models
 from .utils import parse_date
 
 
-def build_column_filter(column_name, column_obj, search_value):
+def build_column_filter(column_name, column_obj, column_spec, search_value):
     search_filter = None
 
     # if type(column_obj.model_field) == fields.CharField:
     #     # do something special with this field
 
+    choices = column_spec['choices']
     if column_obj.has_choices_available:
-        search_filter = Q(**{column_obj.name + '__in': column_obj.search_in_choices(search_value)})
+
+        if choices:
+            # Since we're using choices (we provided a select box)
+            # just use the selected key
+            values = [search_value, ]
+        else:
+            values = column_obj.search_in_choices(search_value)
+
+        search_filter = Q(**{column_obj.name + '__in': values})
+
     elif isinstance(column_obj.model_field, (models.DateTimeField, models.DateField)):
         try:
             parsed_date = parse_date(search_value)

@@ -26,7 +26,11 @@ class TestDatatablesQs(unittest.TestCase):
         }]
 
         #model_columns = Column.collect_model_columns(MyTestModel, ['one', 'two'])
-        model_columns = Column.collect_model_columns(MyTestModel, column_specs)
+        #model_columns = Column.collect_model_columns(MyTestModel, column_specs)
+        model_columns = {
+            'one': Column.column_factory(MyTestModel, column_specs[0]),
+            'two': Column.column_factory(MyTestModel, column_specs[1]),
+        }
         column_links = [
             ColumnLink('one', model_columns['one']),
             ColumnLink('two', model_columns['two'], placeholder=True),

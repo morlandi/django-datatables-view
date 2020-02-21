@@ -1,4 +1,5 @@
 import datetime
+from django.utils.translation import ugettext_lazy as _
 from .exceptions import ColumnOrderError
 from .utils import format_datetime
 
@@ -23,30 +24,46 @@ class Column(object):
             self.model_field = None
             self._allow_choices_lookup = False
 
+    # @staticmethod
+    # def collect_model_columns(model, column_specs):
+    #     """
+    #     Build a list of either Columns or ForeignColumns as required
+    #     """
+    #     columns = [c['name'] for c in column_specs]
+    #     foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c['foreign_field']])
+
+    #     fields = {f.name: f for f in model._meta.get_fields()}
+    #     model_columns = {}
+    #     for col_name in columns:
+    #         if col_name in foreign_fields:
+    #             new_column = ForeignColumn(
+    #                 col_name,
+    #                 model,
+    #                 foreign_fields[col_name]
+    #             )
+    #         elif col_name in fields:
+    #             new_column = Column(fields[col_name])
+    #         else:
+    #             new_column = Column(col_name)
+    #         model_columns[col_name] = new_column
+    #     return model_columns
+
     @staticmethod
-    def collect_model_columns(model, column_specs):
+    def column_factory(model, column_spec):
         """
-        Build a list of either Columns or ForeignColumns as required
+        Build either a Column or a ForeignColumn as required
         """
-
-        columns = [c['name'] for c in column_specs]
-        foreign_fields = dict([(c['name'], c['foreign_field']) for c in column_specs if c['foreign_field']])
-
         fields = {f.name: f for f in model._meta.get_fields()}
-        model_columns = {}
-        for col_name in columns:
-            if col_name in foreign_fields:
-                new_column = ForeignColumn(
-                    col_name,
-                    model,
-                    foreign_fields[col_name]
-                )
-            elif col_name in fields:
-                new_column = Column(fields[col_name])
-            else:
-                new_column = Column(col_name)
-            model_columns[col_name] = new_column
-        return model_columns
+        col_name = column_spec['name']
+        foreign_field = column_spec.get('foreign_field', None)
+
+        if foreign_field:
+            new_column = ForeignColumn(col_name, model, foreign_field)
+        elif col_name in fields:
+            new_column = Column(fields[col_name])
+        else:
+            new_column = Column(col_name)
+        return new_column
 
     @property
     def has_choices_available(self):
@@ -77,7 +94,8 @@ class Column(object):
             value = format_datetime(value, True)
         elif isinstance(value, datetime.date):
             value = format_datetime(value, False)
-
+        elif isinstance(value, bool):
+            value = _('Yes') if value else _('No')
         return value
 
     def render_column(self, obj):
