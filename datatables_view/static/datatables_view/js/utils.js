@@ -293,8 +293,8 @@ window.DatatablesViewUtils = (function() {
     }
 
 
-    function after_table_initialization(table, data, url, full_row_select) {
-        _bind_row_tools(table, url, full_row_select);
+    function after_table_initialization(table, data, url, full_row_select, custom_id) {
+        _bind_row_tools(table, url, full_row_select, custom_id);
         _setup_column_filters(table, data);
     }
 
@@ -309,7 +309,7 @@ window.DatatablesViewUtils = (function() {
         footer.html(html);
     }
 
-    function initialize_table(element, url, extra_options={}, extra_data={}) {
+    function initialize_table(element, url, custom_id="id", extra_options={}, extra_data={}) {
 
         $.ajax({
             type: 'GET',
@@ -433,7 +433,7 @@ window.DatatablesViewUtils = (function() {
             var table = element.dataTable(options);
 
             _daterange_widget_initialize(table, data);
-            after_table_initialization(table, data, url, options.full_row_select);
+            after_table_initialization(table, data, url, options.full_row_select, custom_id);
         })
     }
 
