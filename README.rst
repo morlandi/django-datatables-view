@@ -1116,6 +1116,57 @@ JS Utilities
 - DatatablesViewUtils.redraw_all_tables()
 - DatatablesViewUtils.redraw_table(element)
 
+Internationalization
+--------------------
+
+You can provide localized messages by initializing the DatatablesViewUtils JS module
+as follow (example in italian):
+
+.. code:: javascript
+
+    DatatablesViewUtils.init({
+        search_icon_html: '<i class="fa fa-search" style="font-size: 16px"></i>',
+        language: {
+            "decimal":        "",
+            "emptyTable":     "Nessun dato disponibile",
+            "info":           "Visualizzate da _START_ a _END_ di _TOTAL_ righe",
+            "infoEmpty":      "",
+            "infoFiltered":   "(filtered from _MAX_ total entries)",
+            "infoPostFix":    "",
+            "thousands":      ",",
+            "lengthMenu":     "Visualizza _MENU_ righe per pagina",
+            "loadingRecords": "Caricamento in corso ...",
+            "processing":     "Elaborazione in corso ...",
+            "search":         "Cerca:",
+            "zeroRecords":    "Nessun record trovato",
+            "paginate": {
+                "first":      "Prima",
+                "last":       "Ultima",
+                "next":       ">>",
+                "previous":   "<<"
+            },
+            "aria": {
+                "sortAscending":  ": activate to sort column ascending",
+                "sortDescending": ": activate to sort column descending"
+            }
+        }
+    });
+
+
+You can do this, for example, in your "base.html" template, and it will be in effect
+for all subsequent instantiations:
+
+.. code:: html
+
+    <script language="javascript">
+        $(document).ready(function() {
+            DatatablesViewUtils.init({
+                ...
+            });
+        });
+    </script>
+
+
 Application examples
 ====================
 
