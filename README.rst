@@ -352,6 +352,30 @@ For the first rendering of the table:
 initialSearchValue
     - optional initial value for column filter
 
+Note that `initialSearchValue` can be a value or a callable object.
+If callable it will be called every time a new object is created.
+
+For example:
+
+.. code:: python
+
+    class MyDatatablesView(DatatablesView):
+
+        def today():
+            return datetime.datetime.now().date()
+
+        ...
+
+        column_defs = [
+            ...
+            {
+                'name': 'created',
+                'choices': True,
+                'autofilter': True,
+                'initialSearchValue': today
+            },
+            ...
+        ]
 
 .. image:: screenshots/column_filtering.png
 

@@ -101,6 +101,10 @@ class DatatablesView(View):
 
             column.update(c)
 
+            # We now accept a collable as "initialSearchValue"
+            if callable(column['initialSearchValue']):
+                column['initialSearchValue'] = column['initialSearchValue']()
+
             # TODO: do we really want to accept an empty column name ?
             # Investigate !
             if c['name']:
@@ -313,7 +317,7 @@ class DatatablesView(View):
                 # Initial values for column filters, when supplied
                 # See: https://datatables.net/reference/option/searchCols
                 searchCols = [
-                    {'search': cs['initialSearchValue'], } if cs['initialSearchValue'] is not None else None
+                    {'search': cs['initialSearchValue'], }
                     for cs in self.column_specs
                 ]
 
