@@ -435,6 +435,14 @@ you subscribe them:
 - rowCallback(table, row, data)
 - footerCallback(table, row, data, start, end, display)
 
+Please note the the first parameter of the callback is always the event,
+and next parameters are additional data::
+
+    .trigger('foo', [1, 2]);
+
+    .on('foo', function(event, one, two) { ... });
+
+
 More events triggers sent directly by DataTables.net are listed here:
 
     https://datatables.net/reference/event/
