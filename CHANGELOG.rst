@@ -3,6 +3,10 @@
 History
 =======
 
+v3.1.3
+------
+* Better behaviour for full_row_select
+
 v3.1.2
 ------
 * `initialSearchValue` can now be a value or a callable object

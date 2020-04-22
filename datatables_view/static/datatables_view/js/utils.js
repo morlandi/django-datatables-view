@@ -194,6 +194,7 @@ window.DatatablesViewUtils = (function() {
 
     function _bind_row_tools(table, url, full_row_select, custom_id='id')
     {
+        console.log('*** _bind_row_tools()');
         if (!full_row_select) {
             table.api().on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
                 event.preventDefault();
@@ -213,6 +214,13 @@ window.DatatablesViewUtils = (function() {
             table.api().on('click', 'td', function(event) {
                 event.preventDefault();
                 var tr = $(this).closest('tr');
+
+                // Dont' close child when clicking inside child itself,
+                // unless clicking on a button with class "btn-close"
+                if (tr.hasClass('details') && !$(event.target).hasClass('btn-close')) {
+                    return;
+                }
+
                 var row = table.api().row(tr);
                 if (row.child.isShown()) {
                     row.child.hide();
@@ -294,6 +302,7 @@ window.DatatablesViewUtils = (function() {
 
 
     function after_table_initialization(table, data, url, full_row_select) {
+        console.log('*** after_table_initialization()');
         _bind_row_tools(table, url, full_row_select);
         _setup_column_filters(table, data);
     }
