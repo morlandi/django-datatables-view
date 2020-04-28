@@ -62,7 +62,7 @@ class TestColumnDefs(TestCase):
 
         request = None
         view.initialize(request)
-        response_dict = view.get_response_dict(paginator, draw_idx=0, start_pos=0)
+        response_dict = view.get_response_dict(request, paginator, draw_idx=0, start_pos=0)
 
         self.assertEqual(100, response_dict['recordsTotal'])
         self.assertEqual(100, response_dict['recordsFiltered'])

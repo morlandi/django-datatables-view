@@ -47,6 +47,9 @@ class DatatablesView(View):
     template_name = 'datatables_view/datatable.html'
     initial_order = [[1, "asc"]]
     length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
+    table_row_id_prefix = 'row-'
+    table_row_id_fieldname = 'id'
+    table_row_id_details_postfix = '-details'
 
     # Set with self.initialize()
     column_specs = []  # used to keep column ording as required
@@ -379,7 +382,13 @@ class DatatablesView(View):
         # Failing that, display a simple table with field values
         except TemplateDoesNotExist:
             fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
-            html = '<table class="row-details">'
+
+            row_id = self.get_table_row_id(request, obj)
+            if row_id and self.table_row_id_details_postfix:
+                html = '<table id="%s%s" class="row-details">' % (row_id, self.table_row_id_details_postfix)
+            else:
+                html = '<table class="row-details">'
+
             for field in fields:
                 try:
                     value = getattr(obj, field)
@@ -465,7 +474,7 @@ class DatatablesView(View):
 
         # Slice result
         paginator = Paginator(qs, params['length'] if params['length'] != -1 else qs.count())
-        response_dict = self.get_response_dict(paginator, params['draw'], params['start'])
+        response_dict = self.get_response_dict(request, paginator, params['draw'], params['start'])
         response_dict['footer_message'] = self.footer_message(qs, params)
 
         # Prepare response
@@ -555,7 +564,7 @@ class DatatablesView(View):
         #return self.model_columns[column].render_column(row)
         return self.column_obj(column).render_column(row)
 
-    def prepare_results(self, qs):
+    def prepare_results(self, request, qs):
         json_data = []
         columns = [c['name'] for c in self.column_specs]
         for cur_object in qs:
@@ -566,23 +575,43 @@ class DatatablesView(View):
                 if fieldname
             }
             self.customize_row(retdict, cur_object)
+
+            row_id = self.get_table_row_id(request, cur_object)
+            if row_id:
+                # "Automatic addition of row ID attributes"
+                # https://datatables.net/examples/server_side/ids.html
+                retdict['DT_RowId'] = row_id
+
             json_data.append(retdict)
         return json_data
 
-    def get_response_dict(self, paginator, draw_idx, start_pos):
+    def get_response_dict(self, request, paginator, draw_idx, start_pos):
         page_id = (start_pos // paginator.per_page) + 1
         if page_id > paginator.num_pages:
             page_id = paginator.num_pages
         elif page_id < 1:
             page_id = 1
 
-        objects = self.prepare_results(paginator.page(page_id))
+        objects = self.prepare_results(request, paginator.page(page_id))
 
         return {"draw": draw_idx,
                 "recordsTotal": paginator.count,
                 "recordsFiltered": paginator.count,
                 "data": objects,
                 }
+
+    def get_table_row_id(self, request, obj):
+        """
+        Provides a specific ID for the table row; default: "row-ID"
+        Override to customize as required.
+        """
+        result = ''
+        if self.table_row_id_fieldname:
+            try:
+                result = self.table_row_id_prefix + str(getattr(obj, self.table_row_id_fieldname))
+            except:
+                result = ''
+        return result
 
     def customize_row(self, row, obj):
         # 'row' is a dictionnary representing the current row, and 'obj' is the current object.

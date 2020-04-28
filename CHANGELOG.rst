@@ -3,6 +3,11 @@
 History
 =======
 
+v3.2.0
+------
+* Automatic addition of table row ID (see `get_table_row_id()`)
+* `request` parameter added to `prepare_results()` and `get_response_dict()`
+
 v3.1.4
 ------
 * fix checkbox and radio buttons not working in a form embedded in the details row when full_row_select is active

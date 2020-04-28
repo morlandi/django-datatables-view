@@ -240,6 +240,9 @@ Optional:
 - show_date_filters = None
 - show_column_filters = None
 - disable_queryset_optimization = False
+- table_row_id_prefix = 'row-'
+- table_row_id_fieldname = 'id'
+- table_row_id_details_postfix = '-details'
 
 or override the following methods to provide attribute values at run-time,
 based on request:
@@ -291,6 +294,19 @@ based on request:
         """
         return self.show_column_filters
 
+    def get_table_row_id(self, request, obj):
+        """
+        Provides a specific ID for the table row; default: "row-ID"
+        Override to customize as required.
+        """
+        result = ''
+        if self.table_row_id_fieldname:
+            try:
+                result = self.table_row_id_prefix + str(getattr(obj, self.table_row_id_fieldname))
+            except:
+                result = ''
+        return result
+
 column_defs customizations
 --------------------------
 
@@ -321,6 +337,26 @@ Notes:
     - **width**: for this to be effective, you need to add **table-layout: fixed;** style
       to the HTML table, but in some situations this causes problems in the computation
       of the table columns' widths (at least in the current version 1.10.19 of Datatables.net)
+
+Automatic addition of table row ID
+----------------------------------
+
+Starting from v3.2.0, each table row is characterized with a specific ID on each row
+(tipically, the primary key value from the queryset)
+
+.. image:: screenshots/table_row_id.png
+
+The default behaviour is to provide the string "row-ID", where:
+
+- "row-" is retrieved from self.table_row_id_prefix
+- "ID" is retrieved from the row object, using the field with name self.table_row_id_fieldname (default: "id")
+
+Note that, for this to work, you are required to list the field "id" in the column list (maybe hidden).
+
+This default behaviour can be customized by either:
+
+- replacing the values for `table_row_id_fieldname` and/or `table_row_id_prefix`, or
+- overriding `def get_table_row_id(self, request, obj)`
 
 Filtering single columns
 ------------------------
