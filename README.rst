@@ -1167,6 +1167,8 @@ Redraw table holding the current paging position
 Redraw a single table row
 -------------------------
 
+TODO: THIS DOESN'T SEEM TO WORK PROPERLY 😭
+
 .. code:: javascript
 
     table.DataTable().row(tr).invalidate().draw();
