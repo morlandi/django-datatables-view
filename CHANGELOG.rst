@@ -3,6 +3,10 @@
 History
 =======
 
+v3.1.4
+------
+* fix checkbox and radio buttons not working in a form embedded in the details row when full_row_select is active
+
 v3.1.3
 ------
 * Better behaviour for full_row_select

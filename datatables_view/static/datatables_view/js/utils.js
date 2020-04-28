@@ -212,7 +212,7 @@ window.DatatablesViewUtils = (function() {
         }
         else {
             table.api().on('click', 'td', function(event) {
-                event.preventDefault();
+                //event.preventDefault();
                 var tr = $(this).closest('tr');
 
                 // Dont' close child when clicking inside child itself,
