@@ -1102,8 +1102,8 @@ which for this example happens to be:
             }
         ]
 
-Code Snippets
-=============
+Javascript Code Snippets
+========================
 
 Workaround: Adjust the column widths of all visible tables
 ----------------------------------------------------------
@@ -1114,7 +1114,7 @@ Workaround: Adjust the column widths of all visible tables
         DatatablesViewUtils.adjust_table_columns();
     }, 200);
 
-or event better:
+or maybe better:
 
 .. code:: javascript
 
@@ -1162,6 +1162,42 @@ Redraw table holding the current paging position
         url: ...
     }).done(function(data, textStatus, jqXHR) {
         table.DataTable().ajax.reload(null, false);
+    });
+
+Redraw a single table row
+-------------------------
+
+.. code:: javascript
+
+    table.DataTable().row(tr).invalidate().draw();
+
+Example:
+
+.. code:: javascript
+
+    var table = $(element).closest('table.dataTable');
+    var table_row_id = table.find('tr.shown').attr('id');
+    $.ajax({
+        type: 'POST',
+        url: ...
+    }).done(function(data, textStatus, jqXHR) {
+        table.DataTable().ajax.reload(null, false);
+
+        // Since we've update the record via Ajax, we need to redraw this table row
+        var tr = table.find('#' + table_row_id);
+        var row = table.DataTable().row(tr)
+        row.invalidate().draw();
+
+        // Hack: here we would like to enhance the updated row, by adding the 'updated' class;
+        // Since a callback is not available upon draw completion,
+        // let's use a timer to try later, and cross fingers
+        setTimeout(function() {
+            table.find('#' + table_row_id).addClass('updated');
+        }, 200);
+        setTimeout(function() {
+            table.find('#' + table_row_id).addClass('updated');
+        }, 1000);
+
     });
 
 change DataTables' error reporting mechanism
