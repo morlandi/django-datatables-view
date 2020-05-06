@@ -97,6 +97,7 @@ class DatatablesView(View):
                 'initialSearchValue': None,
                 'autofilter': False,
                 'boolean': False,
+                'max_length': 0,
             }
 
             #valid_keys = [key for key in column.keys()][:]
@@ -193,7 +194,7 @@ class DatatablesView(View):
 
                 # ... or collect distict values if 'autofilter' has been enabled
                 if len(choices) <= 0 and cs['autofilter']:
-                    choices = self.list_autofilter_choices(request, column.model_field, cs['initialSearchValue'])
+                    choices = self.list_autofilter_choices(request, cs, column.model_field, cs['initialSearchValue'])
                 cs['choices'] = choices if len(choices) > 0 else None
             # (3) Otherwise, just use the sequence of choices that has been supplied.
 
@@ -577,6 +578,46 @@ class DatatablesView(View):
         value = self.column_obj(column).render_column(row)
         return value
 
+    def render_clip_value_as_html(self, long_text, short_text, is_clipped):
+        """
+        Given long and shor version of text, the following html representation:
+            <span title="long_text">short_text[ellipsis]</span>
+
+        To be overridden for further customisations.
+        """
+        return '<span title="{long_text}">{short_text}{ellipsis}</span>'.format(
+            long_text=long_text,
+            short_text=short_text,
+            ellipsis='&hellip;' if is_clipped else ''
+        )
+
+    def clip_value(self, text, max_length, as_html):
+        """
+        Given `text`, returns:
+            - original `text` if it's length is less then or equal `max_length`
+            - the clipped left part + ellipses otherwise
+        as either plain text or html (depending on `as_html`)
+        """
+        is_clipped = False
+        long_text = text
+        if len(text) <= max_length:
+            short_text = text
+        else:
+            short_text = text[:max_length]
+            is_clipped = True
+        if as_html:
+            result = self.render_clip_value_as_html(long_text, short_text, is_clipped)
+        else:
+            result = short_text
+            if is_clipped:
+                result += '…'
+        return result
+
+    def clip_results(self, retdict):
+        rows = [(cs['name'], cs['max_length']) for cs in  self.column_specs if cs['max_length'] > 0]
+        for name, max_length in rows:
+            retdict[name] = self.clip_value(str(retdict[name]), max_length, True)
+
     def prepare_results(self, request, qs):
         json_data = []
         columns = [c['name'] for c in self.column_specs]
@@ -589,6 +630,7 @@ class DatatablesView(View):
             }
 
             self.customize_row(retdict, cur_object)
+            self.clip_results(retdict)
 
             row_id = self.get_table_row_id(request, cur_object)
             if row_id:
@@ -791,7 +833,7 @@ class DatatablesView(View):
         return None
 
 
-    def list_autofilter_choices(self, request, field, initial_search_value):
+    def list_autofilter_choices(self, request, column_spec, field, initial_search_value):
         """
         Collects distinct values from specified field,
         and prepares a list of choices for "autofilter" selection.
@@ -821,7 +863,14 @@ class DatatablesView(View):
             if isinstance(field, models.DateField):
                 choices = [(item, format_datetime(item)) for item in values]
             else:
-                choices = [(item, item) for item in values]
+                max_length = column_spec['max_length']
+                if max_length <= 0:
+                    choices = [(item, item) for item in values]
+                else:
+                    choices = [
+                        (item, self.clip_value(str(item), max_length, False))
+                        for item in values
+                    ]
 
         except Exception as e:
             # TODO: investigate what happens here with FKs
