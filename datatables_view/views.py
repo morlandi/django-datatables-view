@@ -96,6 +96,7 @@ class DatatablesView(View):
                 'choices': None,
                 'initialSearchValue': None,
                 'autofilter': False,
+                'boolean': False,
             }
 
             #valid_keys = [key for key in column.keys()][:]
@@ -156,6 +157,7 @@ class DatatablesView(View):
 
             key = cs['name']
             column = Column.column_factory(self.model, cs)
+            choices = []
 
             #
             # Adjust choices
@@ -179,9 +181,15 @@ class DatatablesView(View):
                     else:
                         choices = []
                     choices += [(True, _('Yes')), (False, _('No'))]
+                elif cs['boolean']:
+                    choices += [(True, _('Yes')), (False, _('No'))]
                 else:
                     # Otherwise, retrieve field's choices, if any ...
-                    choices = getattr(column.model_field, 'choices', [])[:]
+                    choices = getattr(column.model_field, 'choices', None)
+                    if choices is None:
+                        choices = []
+                    else:
+                        choices = choices[:]
 
                 # ... or collect distict values if 'autofilter' has been enabled
                 if len(choices) <= 0 and cs['autofilter']:
@@ -560,9 +568,14 @@ class DatatablesView(View):
     def get_initial_queryset(self, request=None):
         return self.model.objects.all()
 
+    def get_foreign_queryset(self, request, field):
+        queryset = field.model.objects.all()
+        return queryset
+
     def render_column(self, row, column):
         #return self.model_columns[column].render_column(row)
-        return self.column_obj(column).render_column(row)
+        value = self.column_obj(column).render_column(row)
+        return value
 
     def prepare_results(self, request, qs):
         json_data = []
@@ -574,6 +587,7 @@ class DatatablesView(View):
                 for fieldname in columns
                 if fieldname
             }
+
             self.customize_row(retdict, cur_object)
 
             row_id = self.get_table_row_id(request, cur_object)
@@ -776,7 +790,8 @@ class DatatablesView(View):
         #return 'Selected rows: %d' % qs.count()
         return None
 
-    def list_autofilter_choices(self, request, model_field, initialSearchValue):
+
+    def list_autofilter_choices(self, request, field, initial_search_value):
         """
         Collects distinct values from specified field,
         and prepares a list of choices for "autofilter" selection.
@@ -788,18 +803,22 @@ class DatatablesView(View):
             ]
         """
         try:
-            values = list(self.get_initial_queryset(request)
-                .values_list(model_field.name, flat=True)
+            if field.model == self.model:
+                queryset = self.get_initial_queryset(request)
+            else:
+                queryset = self.get_foreign_queryset(request, field)
+            values = list(queryset
+                .values_list(field.name, flat=True)
                 .distinct()
-                .order_by(model_field.name)
+                .order_by(field.name)
             )
 
-            # Make sure initialSearchValue is available
-            if initialSearchValue is not None:
-                if initialSearchValue not in values:
-                    values.append(initialSearchValue)
+            # Make sure initial_search_value is available
+            if initial_search_value is not None:
+                if initial_search_value not in values:
+                    values.append(initial_search_value)
 
-            if isinstance(model_field, models.DateField):
+            if isinstance(field, models.DateField):
                 choices = [(item, format_datetime(item)) for item in values]
             else:
                 choices = [(item, item) for item in values]
