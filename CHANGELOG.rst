@@ -3,6 +3,13 @@
 History
 =======
 
+v3.2.1
+------
+* add className to filters
+* improved filtering with choices by including foreign_fields
+* optional "boolean" column attribute to treat calculated column as booleans on explicit request
+* optional "max_length" column attribute to clip results
+
 v3.2.0
 ------
 * Automatic addition of table row ID (see `get_table_row_id()`)

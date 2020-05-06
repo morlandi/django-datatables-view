@@ -179,8 +179,16 @@ you need another "application" view, normally based on a template.
             DatatablesViewUtils.initialize_table(
                 $('#datatable_register'),
                 "{% url 'frontend:datatable_register' %}",
-                extra_option={},
-                extra_data={}
+                {
+                    // extra_options
+                    processing: false,
+                    autoWidth: false,
+                    full_row_select: true,
+                    scrollX: false
+                }, {
+                    // extra_data
+                    // ...
+                },
             );
         });
 
@@ -327,6 +335,8 @@ Example::
         'choices': None,                    # see `Filtering single columns` below
         'initialSearchValue': None,         # see `Filtering single columns` below
         'autofilter': False,                # see `Filtering single columns` below
+        'boolean': False,                   # treat calculated column as BooleanField
+        'max_length': 0,                    # if > 0, clip result longer then max_length
     }, {
         ...
 
@@ -376,6 +386,7 @@ choices
     - True: use Model's field choices;
         + failing that, we might use "autofilter"; that is: collect the list of distinct values from db table
         + or, for **BooleanField** columns, provide (None)/Yes/No choice sequence
+        + calculated column the attribute 'boolean'=True are treated as BooleanFields
     - ((key1, value1), (key2, values), ...) : use supplied sequence of choices
 
 autofilter
@@ -460,6 +471,36 @@ Example:
 
 .. image:: screenshots/003.png
 
+Clipping results
+----------------
+
+Sometimes you might want to clip results up to a given maximum length, to control the column size.
+
+This can be obtained by specifying a positive value for the `max_length` column_spec attribute.
+
+Results will be clipped in both the column cells and in the column filter.
+
+.. image:: screenshots/clipping_results.png
+
+Clipped results are rendered as html text as follows:
+
+.. code:: python
+
+    def render_clip_value_as_html(self, long_text, short_text, is_clipped):
+        """
+        Given long and shor version of text, the following html representation:
+            <span title="long_text">short_text[ellipsis]</span>
+
+        To be overridden for further customisations.
+        """
+        return '<span title="{long_text}">{short_text}{ellipsis}</span>'.format(
+            long_text=long_text,
+            short_text=short_text,
+            ellipsis='&hellip;' if is_clipped else ''
+        )
+
+You can customise the rendering by overriding `render_clip_value_as_html()`
+
 Receiving table events
 ----------------------
 
@@ -533,6 +574,22 @@ Example:
             queryset = super().get_initial_queryset(request)
         return queryset
 
+get_foreign_queryset()
+......................
+
+When collecting data for autofiltering a "foreign_field" column, we need some data
+source for doing the lookup.
+
+The default implementation is as follows:
+
+.. code:: python
+
+    def get_foreign_queryset(self, request, field):
+        queryset = field.model.objects.all()
+        return queryset
+
+You can override it for further reducing the resulting list.
+
 customize_row()
 ...............
 
@@ -559,6 +616,8 @@ render_row_details()
 
 Renders an HTML fragment to show table row content in "detailed view" fashion,
 as previously explained later in the **Add row tools as first column** section.
+
+See also: `row details customization`_
 
 Example:
 
@@ -607,6 +666,28 @@ Example:
 
 .. image:: screenshots/005.png
 
+
+render_clip_value_as_html()
+...........................
+
+Renders clipped results as html text:
+
+.. code:: python
+
+    def render_clip_value_as_html(self, long_text, short_text, is_clipped):
+        """
+        Given long and shor version of text, the following html representation:
+            <span title="long_text">short_text[ellipsis]</span>
+
+        To be overridden for further customisations.
+        """
+        return '<span title="{long_text}">{short_text}{ellipsis}</span>'.format(
+            long_text=long_text,
+            short_text=short_text,
+            ellipsis='&hellip;' if is_clipped else ''
+        )
+
+Override to customise the rendering of clipped cells.
 
 Queryset optimization
 =====================
