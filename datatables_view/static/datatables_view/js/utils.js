@@ -144,8 +144,12 @@ window.DatatablesViewUtils = (function() {
                                 .attr('value', item.initialSearchValue ? item.initialSearchValue : '')
                             html = $('<div>').append(input).html();
                         }
-                        //console.log(html);
-                        filter_row += '<th>' + html + '</th>';
+                        if (item.className) {
+                            filter_row += '<th class="' + item.className + '">' + html + '</th>';
+                        }
+                        else {
+                            filter_row += '<th>' + html + '</th>';
+                        }
                     }
                     else {
                         if (index == 0) {
