@@ -9,9 +9,9 @@ when used with server-side processing mode.
 In this context, the rendering of the table is the result of a serie of Ajax
 requests to the server following user interactions (i.e. when paging, ordering, searching, etc.).
 
-With django-datatables-view, basically you have to provide DatatablesView-derived view
+With django-datatables-view, basically you have to provide a DatatablesView-derived view
 to describe the desired table content and behaviour, and the app manages the interaction
-with DataTables.net by responding to the ajax requests with suitable responses.
+with DataTables.net by reacting to the ajax requests with suitable responses.
 
 Features:
 
