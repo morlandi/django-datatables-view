@@ -2,12 +2,16 @@
 django-datatables-view
 ======================
 
-This django app allows the integration of a Django project with the jQuery Javascript
-library DataTables.net, processing queries in the server-side mode.
+django-datatables-view is a Django app which provides the integration of a Django
+project with the jQuery Javascript library DataTables.net,
+when used with server-side processing mode.
 
-Basically, have to provide a specific view, derived from DatatablesView, to describe
-the desired table content and behaviour, and the app manages the interaction
-with DataTables.net
+In this context, the rendering of the table is the result of a serie of Ajax
+requests to the server following user interactions (i.e. when paging, ordering, searching, etc.).
+
+With django-datatables-view, basically you have to provide DatatablesView-derived view
+to describe the desired table content and behaviour, and the app manages the interaction
+with DataTables.net by responding to the ajax requests with suitable responses.
 
 Features:
 
@@ -180,7 +184,7 @@ you need another "application" view, normally based on a template.
                 $('#datatable_register'),
                 "{% url 'frontend:datatable_register' %}",
                 {
-                    // extra_options
+                    // extra_options (example)
                     processing: false,
                     autoWidth: false,
                     full_row_select: true,
@@ -386,7 +390,7 @@ choices
     - True: use Model's field choices;
         + failing that, we might use "autofilter"; that is: collect the list of distinct values from db table
         + or, for **BooleanField** columns, provide (None)/Yes/No choice sequence
-        + calculated column the attribute 'boolean'=True are treated as BooleanFields
+        + calculated columns with attribute 'boolean'=True are treated as BooleanFields
     - ((key1, value1), (key2, values), ...) : use supplied sequence of choices
 
 autofilter
@@ -474,7 +478,7 @@ Example:
 Clipping results
 ----------------
 
-Sometimes you might want to clip results up to a given maximum length, to control the column size.
+Sometimes you might want to clip results up to a given maximum length, to control the column width.
 
 This can be obtained by specifying a positive value for the `max_length` column_spec attribute.
 
@@ -577,7 +581,7 @@ Example:
 get_foreign_queryset()
 ......................
 
-When collecting data for autofiltering a "foreign_field" column, we need some data
+When collecting data for autofiltering in a "foreign_field" column, we need some data
 source for doing the lookup.
 
 The default implementation is as follows:
@@ -670,7 +674,7 @@ Example:
 render_clip_value_as_html()
 ...........................
 
-Renders clipped results as html text:
+Renders clipped results as html span tag, providing the non-clipped value as title:
 
 .. code:: python
 
