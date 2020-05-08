@@ -1,3 +1,5 @@
 include README.rst
+include LICENSE
+include CHANGELOG.rst
 recursive-include datatables_view/static *
 recursive-include datatables_view/templates *
