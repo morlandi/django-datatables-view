@@ -268,7 +268,7 @@ Required:
 Optional:
 
 - template_name = 'datatables_view/datatable.html'
-- initial_order = [[1, "asc"]]
+- initial_order = [[1, "asc"], [5, "desc"]]   # positions can also be expressed as column names: [['surname', 'asc'], ]
 - length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
 - latest_by = None
 - show_date_filters = None

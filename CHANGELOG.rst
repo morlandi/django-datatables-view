@@ -3,6 +3,10 @@
 History
 =======
 
+v3.2.2
+------
+* accept positions expressed as column names in initial_order[]
+
 v3.2.1
 ------
 * add className to filters

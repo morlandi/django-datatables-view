@@ -306,6 +306,22 @@ class DatatablesView(View):
             return self.column_index[name]['spec']
         return None
 
+    def fix_initial_order(self, initial_order):
+        """
+        "initial_order" is a list of (position, direction) tuples; for example:
+            [[1, 'asc'], [5, 'desc']]
+
+        Here, we also accept positions expressed as column names,
+        and convert the to the corresponding numeric position.
+        """
+        values = []
+        keys = list(self.column_index.keys())
+        for position, direction in initial_order:
+            if type(position) == str:
+                position = keys.index(position)
+            values.append([position, direction])
+        return values
+
     #@method_decorator(csrf_exempt)
     def dispatch(self, request, *args, **kwargs):
 
@@ -319,6 +335,8 @@ class DatatablesView(View):
 
                 # Sanity check for initial order
                 initial_order = self.get_initial_order(request)
+                initial_order = self.fix_initial_order(initial_order)
+
                 initial_order_columns = [row[0] for row in initial_order]
                 for col in initial_order_columns:
                     if col >= len(self.column_specs):
