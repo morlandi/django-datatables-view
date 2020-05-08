@@ -33,6 +33,9 @@ Notes:
      As far as I know, no Django3-specific features have been applied.
      In case, please open an issue, and I will fix it.
 
+   - I'm not willing to support Python 2.x and Django 1.x any more; in case, use a previous release (tagged as v2.x.x);
+     old releases will be in place in the repo forever
+
 Features:
 
 - Pagination
