@@ -13,18 +13,8 @@ With django-datatables-view, basically you have to provide a DatatablesView-deri
 to describe the desired table content and behaviour, and the app manages the interaction
 with DataTables.net by reacting to the ajax requests with suitable responses.
 
-Features:
+Notes:
 
-- Pagination
-- Column ordering
-- Global generic search
-- Global date-range search over "get_latest_by" column
-- Column specific filtering
-- Foreign key fields can be used, using the "model1__model2__field" notation
-- Customizable rendering of table rows
-- ...
-
-.. NOTE::
    Since someone asked ...
 
    - I use this app for my own projects, and improve it from time to time as new needs arises.
@@ -43,7 +33,16 @@ Features:
      As far as I know, no Django3-specific features have been applied.
      In case, please open an issue, and I will fix it.
 
-dd
+Features:
+
+- Pagination
+- Column ordering
+- Global generic search
+- Global date-range search over "get_latest_by" column
+- Column specific filtering
+- Foreign key fields can be used, using the "model1__model2__field" notation
+- Customizable rendering of table rows
+- ...
 
 Inspired from:
 
