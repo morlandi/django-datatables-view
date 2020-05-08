@@ -24,6 +24,26 @@ Features:
 - Customizable rendering of table rows
 - ...
 
+.. NOTE::
+   Since someone asked ...
+
+   - I use this app for my own projects, and improve it from time to time as new needs arises.
+
+   - I received so much from the Django community, so I'm more than happy to share something hopefully useful for others.
+     The app is intended to be opensource; feel free to use it we no restrictions at all.
+     I added a MIT Licence file to the github repo, to make this more explicit.
+
+   - The app hasn't been published on PyPI since, due to a name conflict, that would require renaming it.
+     Is it worth it ? If you think so, please let me know opening an issue in the Github project.
+
+   - Unfortunately I only have a few unit tests, and didn't bother (yet) to add a TOX procedure to run then with
+     different Python/Django versions.
+     Having said this, I can confirm that I do happen to use it with no problems in projects based on Django 2.x.
+     However, most recent improvements have been tested mainly with Django 3.
+     As far as I know, no Django3-specific features have been applied.
+     In case, please open an issue, and I will fix it.
+
+dd
 
 Inspired from:
 
