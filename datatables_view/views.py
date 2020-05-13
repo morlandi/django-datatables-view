@@ -190,6 +190,16 @@ class DatatablesView(View):
                     if choices is None:
                         choices = []
                     else:
+                        #
+                        # Here, we could abbreviate select's options as well;
+                        # however, the caller can easily apply a 'width' css attribute to the select tag, instead
+                        #
+                        # max_length = cs['max_length']
+                        # if max_length <= 0:
+                        #     choices = [(c[0], c[1]) for c in choices]
+                        # else:
+                        #     choices = [(c[0], self.clip_value(c[1], max_length, False)) for c in choices]
+                        #
                         choices = choices[:]
 
                 # ... or collect distict values if 'autofilter' has been enabled
