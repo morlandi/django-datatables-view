@@ -49,7 +49,6 @@ class DatatablesView(View):
     length_menu = [[10, 20, 50, 100], [10, 20, 50, 100]]
     table_row_id_prefix = 'row-'
     table_row_id_fieldname = 'id'
-    table_row_id_details_postfix = '-details'
 
     # Set with self.initialize()
     column_specs = []  # used to keep column ording as required
@@ -370,8 +369,11 @@ class DatatablesView(View):
                     'show_column_filters': self.show_column_filters,
                 })
             elif action == 'details':
+                #row_id = request.REQUEST.get('id')
+                row_id = request.REQUEST.get(self.table_row_id_fieldname)
                 return JsonResponse({
-                    'html': self.render_row_details(request.REQUEST.get('id'), request),
+                    'html': self.render_row_details(row_id, request),
+                    'parent-row-id': row_id,
                 })
 
             response = super(DatatablesView, self).dispatch(request, *args, **kwargs)
@@ -379,19 +381,6 @@ class DatatablesView(View):
             assert False
             #response = HttpResponse(self.render_table(request))
         return response
-
-    # def render_row_details(self, id, request=None):
-    #     obj = self.model.objects.get(id=id)
-    #     fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
-    #     html = '<table class="row-details">'
-    #     for field in fields:
-    #         try:
-    #             value = getattr(obj, field)
-    #             html += '<tr><td>%s</td><td>%s</td></tr>' % (field, value)
-    #         except:
-    #             pass
-    #     html += '</table>'
-    #     return html
 
     def get_model_admin(self):
         from django.contrib import admin
@@ -419,13 +408,7 @@ class DatatablesView(View):
         # Failing that, display a simple table with field values
         except TemplateDoesNotExist:
             fields = [f.name for f in self.model._meta.get_fields() if f.concrete]
-
-            row_id = self.get_table_row_id(request, obj)
-            if row_id and self.table_row_id_details_postfix:
-                html = '<table id="%s%s" class="row-details">' % (row_id, self.table_row_id_details_postfix)
-            else:
-                html = '<table class="row-details">'
-
+            html = '<table class="row-details">'
             for field in fields:
                 try:
                     value = getattr(obj, field)
@@ -688,6 +671,9 @@ class DatatablesView(View):
         """
         Provides a specific ID for the table row; default: "row-ID"
         Override to customize as required.
+
+        Do to a limitation of datatables.net, we can only supply to table rows
+        a id="row-ID" attribute, and not a data-row-id="ID" attribute
         """
         result = ''
         if self.table_row_id_fieldname:

@@ -276,7 +276,6 @@ Optional:
 - disable_queryset_optimization = False
 - table_row_id_prefix = 'row-'
 - table_row_id_fieldname = 'id'
-- table_row_id_details_postfix = '-details'
 
 or override the following methods to provide attribute values at run-time,
 based on request:
@@ -972,6 +971,14 @@ in the template, much like django's `admin/change_form.html` does.
 If no template is available, a simple HTML table with all field values
 is built instead.
 
+In all cases, the resulting HTML will be wrapped in the following structure:
+
+.. code :: html
+
+    <tr class="details">
+        <td class="details">
+            <div class="row-details-wrapper" data-parent-row-id="PARENT-ROW-ID">
+                ...
 
 Filter by global date range
 ---------------------------

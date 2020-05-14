@@ -246,7 +246,7 @@ window.DatatablesViewUtils = (function() {
 
     function _load_row_details(rowData, url, custom_id) {
         var div = $('<div/>')
-            .addClass('loading')
+            .addClass('row-details-wrapper loading')
             .text('Loading...');
 
         if (rowData !== undefined) {
@@ -258,6 +258,10 @@ window.DatatablesViewUtils = (function() {
                 },
                 dataType: 'json',
                 success: function(json) {
+                    var parent_row_id = json['parent-row-id'];
+                    if (parent_row_id !== undefined) {
+                        div.attr('data-parent-row-id', parent_row_id);
+                    }
                     div.html(json.html).removeClass('loading');
                 }
             });
