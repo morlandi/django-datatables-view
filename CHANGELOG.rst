@@ -3,6 +3,10 @@
 History
 =======
 
+v3.2.3
+------
+* "data-parent-row-id" attribute added to details row
+
 v3.2.2
 ------
 * accept positions expressed as column names in initial_order[]
