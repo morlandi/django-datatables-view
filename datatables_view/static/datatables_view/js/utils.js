@@ -198,9 +198,7 @@ window.DatatablesViewUtils = (function() {
     //
     function _bind_row_tools(table, url, full_row_select, custom_id='id')
     {
-
         console.log('*** _bind_row_tools()');
-
         if (!full_row_select) {
             table.api().on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
                 event.preventDefault();
@@ -380,9 +378,6 @@ window.DatatablesViewUtils = (function() {
                 //     }
                 // },
                 ajax: function(data, callback, settings) {
-
-
-
                       var table = $(this);
                       data.date_from = table.data('date_from');
                       data.date_to = table.data('date_to');
