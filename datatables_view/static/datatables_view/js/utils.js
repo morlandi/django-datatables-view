@@ -195,10 +195,12 @@ window.DatatablesViewUtils = (function() {
         }
     };
 
-
+    //
     function _bind_row_tools(table, url, full_row_select, custom_id='id')
     {
+
         console.log('*** _bind_row_tools()');
+
         if (!full_row_select) {
             table.api().on('click', 'td.dataTables_row-tools .plus, td.dataTables_row-tools .minus', function(event) {
                 event.preventDefault();
@@ -250,12 +252,15 @@ window.DatatablesViewUtils = (function() {
             .text('Loading...');
 
         if (rowData !== undefined) {
+            // set custom_id field as key to match pk_name
+            var data = {
+                action: 'details',
+            }
+            data[custom_id] = rowData[custom_id]
+
             $.ajax({
                 url: url,
-                data: {
-                    action: 'details',
-                    id: rowData[custom_id]
-                },
+                data: data,
                 dataType: 'json',
                 success: function(json) {
                     var parent_row_id = json['parent-row-id'];
@@ -308,10 +313,10 @@ window.DatatablesViewUtils = (function() {
         }
     }
 
-
-    function after_table_initialization(table, data, url, full_row_select) {
+    // Add custom_id to match real pk_name if not id
+    function after_table_initialization(table, data, url, full_row_select, custom_id) {
         console.log('*** after_table_initialization()');
-        _bind_row_tools(table, url, full_row_select);
+        _bind_row_tools(table, url, full_row_select, custom_id);
         _setup_column_filters(table, data);
     }
 
@@ -375,6 +380,9 @@ window.DatatablesViewUtils = (function() {
                 //     }
                 // },
                 ajax: function(data, callback, settings) {
+
+
+
                       var table = $(this);
                       data.date_from = table.data('date_from');
                       data.date_to = table.data('date_to');
@@ -450,7 +458,13 @@ window.DatatablesViewUtils = (function() {
             var table = element.dataTable(options);
 
             _daterange_widget_initialize(table, data);
-            after_table_initialization(table, data, url, options.full_row_select);
+            // Customize id field in case pk_field is not id
+            if (data.table_row_id_fieldname != undefined){
+                var custom_id = data.table_row_id_fieldname
+            }else{
+                var custom_id = 'id'
+            }
+            after_table_initialization(table, data, url, options.full_row_select, custom_id);
         })
     }
 
