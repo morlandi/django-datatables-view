@@ -367,6 +367,7 @@ class DatatablesView(View):
                     'length_menu': self.get_length_menu(request),
                     'show_date_filters': self.show_date_filters,
                     'show_column_filters': self.show_column_filters,
+                    'table_row_id_fieldname': self.table_row_id_fieldname
                 })
             elif action == 'details':
                 #row_id = request.REQUEST.get('id')
@@ -389,8 +390,13 @@ class DatatablesView(View):
         return None
 
     def render_row_details(self, id, request=None):
+        # Determine id name
+        if self.table_row_id_fieldname:
+            q = {self.table_row_id_fieldname: id}
+        else:
+            q = {id: id}
 
-        obj = self.model.objects.get(id=id)
+        obj = self.model.objects.get(**q)
 
         # Search a custom template for rendering, if available
         try:
@@ -665,7 +671,9 @@ class DatatablesView(View):
                 "recordsTotal": paginator.count,
                 "recordsFiltered": paginator.count,
                 "data": objects,
+
                 }
+
 
     def get_table_row_id(self, request, obj):
         """
