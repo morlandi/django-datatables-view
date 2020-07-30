@@ -671,9 +671,7 @@ class DatatablesView(View):
                 "recordsTotal": paginator.count,
                 "recordsFiltered": paginator.count,
                 "data": objects,
-
                 }
-
 
     def get_table_row_id(self, request, obj):
         """
