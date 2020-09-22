@@ -1,4 +1,12 @@
 
+.. DANGER::
+    This package has been renamed as `django-ajax-datatable` since v4.0.0, to avoid a conflict in PyPI.
+    You might want to switch to the new project https://github.com/morlandi/django-ajax-datatable for possibile future improvements; 
+    however, all releases published in the current repo will rest in place forever.
+    
+    A check list of actions required to migrate your Django project to the new package is available here:
+    https://github.com/morlandi/django-ajax-datatable/blob/master/MIGRATE_FROM_DATATABLES_VIEW_CHECKLIST.rst
+
 django-datatables-view
 ======================
 
