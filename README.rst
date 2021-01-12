@@ -1,7 +1,7 @@
 
 **⚠️ Current status of this project**
 
-This package has been renamed as `django-ajax-datatable` since v4.0.0, to avoid a conflict in PyPI.
+**This package has been renamed as `django-ajax-datatable` since v4.0.0, to avoid a conflict in PyPI, and moved to https://github.com/morlandi/django-ajax-datatable**.
 You might want to switch to the new project https://github.com/morlandi/django-ajax-datatable for possibile future improvements; 
 however, all releases published in the current repo will rest in place forever.
 
